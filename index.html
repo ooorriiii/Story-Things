@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Hidden Object Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            background-color: #4a90e2;
+            color: #fff;
+            width: 100%;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #game-container {
+            margin-top: 2rem;
+            width: 80%;
+            max-width: 600px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: none;
+            position: relative;
+        }
+        #start-screen, #game-screen {
+            padding: 1rem;
+        }
+        button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+        }
+        button.primary {
+            background-color: #4a90e2;
+            color: white;
+        }
+        button.secondary {
+            background-color: #ccc;
+            color: #333;
+            margin-left: 0.5rem;
+        }
+        #balance {
+            margin-top: 0.5rem;
+            font-weight: bold;
+        }
+        #hidden-object-area {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background-color: #e0e0e0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .object {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: red;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Crypto Hidden Object Game (Demo)</h1>
+    </header>
+    <div id="game-container">
+        <div id="start-screen">
+            <p>Welcome to this hidden object demo game. In the final system the coins will be held in a real crypto wallet. For now, you start with a demo balance of 5 coins.</p>
+            <button id="connect-wallet" class="secondary">Connect Wallet (Demo)</button>
+            <button id="start-game" class="primary">Start Game</button>
+            <div id="balance"></div>
+        </div>
+        <div id="game-screen" style="display:none;">
+            <p>Find all 3 highlighted objects (red dots). Click on them to collect. If you get stuck, you can use a hint at the cost of one coin.</p>
+            <div id="hidden-object-area"></div>
+            <button id="hint-button" class="secondary">Get Hint (-1 coin)</button>
+            <button id="reset-button" class="secondary">Reset Game</button>
+            <div id="game-message"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
