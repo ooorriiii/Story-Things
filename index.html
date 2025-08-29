@@ -22,20 +22,15 @@
             text-align: center;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+        /* Card-like container */
         #game-container {
             margin-top: 2rem;
-            
             width: 80%;
             max-width: 600px;
-            
             border: 1px solid #ccc;
-            
             background-color: #fff;
-            
-            
-            
-            box-shadow:  2px 4px rgba(0, 0, 0, 0.1);
-    
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             position: relative;
         }
         #start-screen, #game-screen {
@@ -65,7 +60,7 @@
             position: relative;
             width: 100%;
             height: 300px;
-            background-color: #e0e0e0;
+            background: linear-gradient(135deg, #83a4d4, #b6fbff);
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -73,11 +68,17 @@
         }
         .object {
             position: absolute;
-            width: 24px;
-            height: 24px;
-            background-color: red;
-            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            color: #ffd700;
+            font-size: 32px;
+            line-height: 32px;
+            text-align: center;
             cursor: pointer;
+        }
+        #timer {
+            margin-top: 0.5rem;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -87,13 +88,14 @@
     </header>
     <div id="game-container">
         <div id="start-screen">
-            <p>Welcome to this hidden object demo game. In the final system the coins will be held in a real crypto wallet. For now, you start with a demo balance of 5 coins.</p>
+            <p>Welcome to this hidden object demo game. In the final system, the coins will be held in a real crypto wallet. For now, you start with a demo balance of 5 coins.</p>
             <button id="connect-wallet" class="secondary">Connect Wallet (Demo)</button>
             <button id="start-game" class="primary">Start Game</button>
             <div id="balance"></div>
         </div>
         <div id="game-screen" style="display:none;">
-            <p>Find all 3 highlighted objects (red dots). Click on them to collect. If you get stuck, you can use a hint at the cost of one coin.</p>
+            <p>Find all the hidden stars. Each level adds more stars and less time. Use a hint at the cost of one coin if you're stuck.</p>
+            <div id="timer"></div>
             <div id="hidden-object-area"></div>
             <button id="hint-button" class="secondary">Get Hint (-1 coin)</button>
             <button id="reset-button" class="secondary">Reset Game</button>
