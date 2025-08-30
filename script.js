@@ -1,4 +1,5 @@
-// Improved hidden object game with levels, timer, coin rewards, and progress bar.
+// Enhanced hidden object game with level progression, animated stars,
+// progress bar with color change, sparkle effects on collection, and a score tracker.
 
 const startGameBtn = document.getElementById('start-game');
 const connectWalletBtn = document.getElementById('connect-wallet');
@@ -8,53 +9,107 @@ const startScreen = document.getElementById('start-screen');
 const gameScreen = document.getElementById('game-screen');
 const hiddenObjectArea = document.getElementById('hidden-object-area');
 const balanceEl = document.getElementById('balance');
-const levelInfo = document.getElementById('level-info');
 const coinDisplay = document.getElementById('coin-display');
+const levelInfo = document.getElementById('level-info');
+const scoreInfo = document.getElementById('score-info');
 const timerEl = document.getElementById('timer');
 const progressBar = document.getElementById('progress-bar');
 const gameMessage = document.getElementById('game-message');
 
-// Demo balance stored in localStorage
+// Demo balance stored in localStorage (for persistence between sessions)
 let balance = parseInt(localStorage.getItem('demoBalance') || '5', 10);
-let level = 1;
 let objects = [];
-let timeTotal = 30;
-let timeLeft = 30;
+let level = 1;
+let timeLeft = 0;
+let totalTime = 0;
 let timerInterval;
+let maxLevel = parseInt(localStorage.getItem('maxLevel') || '0', 10);
 
 function updateBalanceDisplay() {
+  // update both persistent balance and displayed coin info
+  localStorage.setItem('demoBalance', balance.toString());
   balanceEl.textContent = `Balance: ${balance} coins`;
   coinDisplay.textContent = `Coins: ${balance}`;
-  localStorage.setItem('demoBalance', balance.toString());
 }
 
 function updateLevelInfo() {
-  levelInfo.textContent = `Level: ${level} \u2013 Find ${objects.length} star${objects.length !== 1 ? 's' : ''}`;
+  levelInfo.textContent = `Level: ${level}`;
+  scoreInfo.textContent = `Highest level: ${maxLevel}`;
+}
+
+function connectWallet() {
+  alert('In the real system your crypto wallet would be connected. This is only a demo.');
+}
+
+// Initialize a new level
+function initGame() {
+  hiddenObjectArea.innerHTML = '';
+  gameMessage.textContent = '';
+  // Determine time based on level: start with 60s and decrease by 10s per level, minimum 20s
+  totalTime = Math.max(60 - (level - 1) * 10, 20);
+  timeLeft = totalTime;
+  updateProgressBar(1); // full width and green
+  updateTimerDisplay();
+  objects = [];
+  updateLevelInfo();
+  // Add objects: number increases with level (level + 2)
+  for (let i = 0; i < level + 2; i++) {
+    const obj = document.createElement('div');
+    obj.className = 'object';
+    obj.textContent = '★';
+    obj.style.left = Math.floor(Math.random() * 90 + 5) + '%';
+    obj.style.top = Math.floor(Math.random() * 80 + 10) + '%';
+    obj.addEventListener('click', (e) => {
+      // create sparkle effect at click location
+      const rect = hiddenObjectArea.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      createSparkle(x, y);
+      obj.style.display = 'none';
+      objects.splice(objects.indexOf(obj), 1);
+      checkCompletion();
+    });
+    objects.push(obj);
+    hiddenObjectArea.appendChild(obj);
+  }
+  startTimer();
 }
 
 function updateTimerDisplay() {
   timerEl.textContent = `Time left: ${timeLeft}s`;
-  const width = (timeLeft / timeTotal) * 100;
-  progressBar.style.width = `${width}%`;
+}
+
+function updateProgressBar(fraction) {
+  // fraction between 0 and 1
+  progressBar.style.width = `${fraction * 100}%`;
+  // Transition color from green (#4caf50) to red (#f44336)
+  const startColor = [76, 175, 80];
+  const endColor = [244, 67, 54];
+  const r = Math.round(startColor[0] + (1 - fraction) * (endColor[0] - startColor[0]));
+  const g = Math.round(startColor[1] + (1 - fraction) * (endColor[1] - startColor[1]));
+  const b = Math.round(startColor[2] + (1 - fraction) * (endColor[2] - startColor[2]));
+  progressBar.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
 }
 
 function startTimer() {
+  stopTimer();
   updateTimerDisplay();
+  updateProgressBar(1);
   timerInterval = setInterval(() => {
     timeLeft--;
     if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      timerInterval = null;
       timeLeft = 0;
       updateTimerDisplay();
-      gameMessage.textContent = "Time's up! Restarting level.";
-      // Restart same level after short delay
-      setTimeout(() => {
-        initGame();
-      }, 1500);
-    } else {
-      updateTimerDisplay();
+      updateProgressBar(0);
+      stopTimer();
+      gameMessage.textContent = `Time's up! You reached level ${level}. Click Reset Game to try again.`;
+      // disable further clicks
+      objects.forEach(obj => obj.style.pointerEvents = 'none');
+      return;
     }
+    updateTimerDisplay();
+    const fraction = timeLeft / totalTime;
+    updateProgressBar(fraction);
   }, 1000);
 }
 
@@ -65,57 +120,25 @@ function stopTimer() {
   }
 }
 
-function initGame() {
-  // Clear existing objects and timer
-  stopTimer();
-  hiddenObjectArea.innerHTML = '';
-  gameMessage.textContent = '';
-  objects = [];
-  // Determine number of objects based on level
-  const numObjects = level + 2;
-  // Determine time based on level (shorter as levels increase)
-  timeTotal = Math.max(20, 35 - level * 3);
-  timeLeft = timeTotal;
-  // Generate objects
-  for (let i = 0; i < numObjects; i++) {
-    const obj = document.createElement('div');
-    obj.className = 'object';
-    obj.textContent = '★';
-    obj.style.left = Math.floor(Math.random() * 90 + 5) + '%';
-    obj.style.top = Math.floor(Math.random() * 90 + 5) + '%';
-    obj.addEventListener('click', () => {
-      // Remove star from board
-      obj.remove();
-      objects.splice(objects.indexOf(obj), 1);
-      checkCompletion();
-    });
-    objects.push(obj);
-    hiddenObjectArea.appendChild(obj);
-  }
-  updateLevelInfo();
-  updateTimerDisplay();
-  startTimer();
-}
-
-function checkCompletion() {
-  if (objects.length === 0) {
-    stopTimer();
-    // Award coins equal to current level
-    balance += level;
-    updateBalanceDisplay();
-    gameMessage.textContent = `Level ${level} complete! You earned ${level} coin${level !== 1 ? 's' : ''}. Starting next level...`;
-    level++;
+function createSparkle(x, y) {
+  // Create 8 sparkles around the clicked location
+  for (let i = 0; i < 8; i++) {
+    const spark = document.createElement('div');
+    spark.className = 'spark';
+    const angle = Math.random() * Math.PI * 2;
+    const distance = Math.random() * 30 + 10;
+    const offsetX = Math.cos(angle) * distance;
+    const offsetY = Math.sin(angle) * distance;
+    spark.style.left = `${x + offsetX - 4}px`;
+    spark.style.top = `${y + offsetY - 4}px`;
+    hiddenObjectArea.appendChild(spark);
     setTimeout(() => {
-      initGame();
-    }, 2000);
+      spark.remove();
+    }, 600);
   }
 }
 
-// Event listeners
-connectWalletBtn.addEventListener('click', () => {
-  alert('In the real system your crypto wallet would be connected. This is only a demo.');
-});
-
+// Start game button
 startGameBtn.addEventListener('click', () => {
   level = 1;
   startScreen.style.display = 'none';
@@ -124,6 +147,10 @@ startGameBtn.addEventListener('click', () => {
   initGame();
 });
 
+// Connect wallet button
+connectWalletBtn.addEventListener('click', connectWallet);
+
+// Hint button: reveals one remaining object at the cost of 1 coin
 hintButton.addEventListener('click', () => {
   if (balance <= 0) {
     gameMessage.textContent = "You don't have enough coins for a hint.";
@@ -133,25 +160,45 @@ hintButton.addEventListener('click', () => {
     gameMessage.textContent = 'There are no objects left to find.';
     return;
   }
-  // Deduct one coin and update balance
   balance -= 1;
   updateBalanceDisplay();
-  // Highlight one of the remaining objects
+  // highlight one object temporarily
   const obj = objects[0];
   const originalColor = obj.style.color;
-  obj.style.color = '#ffeb3b';
-  obj.style.transform = 'scale(1.5)';
+  obj.style.color = '#00ff00';
   setTimeout(() => {
     obj.style.color = originalColor;
-    obj.style.transform = '';
-  }, 1000);
+  }, 800);
 });
 
+// Reset game button
 resetButton.addEventListener('click', () => {
-  // Reset to level 1, keep balance
   level = 1;
+  stopTimer();
+  updateBalanceDisplay();
   initGame();
 });
 
-// Initialize balance display on page load
+function checkCompletion() {
+  if (objects.length === 0) {
+    stopTimer();
+    // Award coins equal to current level
+    balance += level;
+    updateBalanceDisplay();
+    gameMessage.textContent = `Great job! You completed level ${level}. Awarded ${level} coin${level > 1 ? 's' : ''}. Starting next level...`;
+    // update maxLevel if surpassed
+    if (level > maxLevel) {
+      maxLevel = level;
+      localStorage.setItem('maxLevel', maxLevel.toString());
+    }
+    level++;
+    updateLevelInfo();
+    setTimeout(() => {
+      initGame();
+    }, 2000);
+  }
+}
+
+// Initial display on page load
 updateBalanceDisplay();
+updateLevelInfo();
