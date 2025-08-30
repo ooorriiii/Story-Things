@@ -662,7 +662,7 @@ function proceedToNextLevel() {
 }
 
 // Event listeners
-connectWalletBtn.addEventListener('click', () => {
+connectWalletBtn.addEventListener("click", connectCryptoWallet);
   alert('In a real implementation this would connect your crypto wallet.');
 });
 
