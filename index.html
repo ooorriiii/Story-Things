@@ -65,7 +65,7 @@
         <option value="village">Village Secrets</option>
       </select>
       <br>
-      <button id="connect-wallet" class="secondary" onclick="connectUniversalWallet()">Connect Wallet</button>
+      <button id="connect-wallet" class="secondary">Connect Wallet (Demo)</button>
       <button id="start-game" class="primary">Start Game</button>
       <div id="balance-display"></div>
       <div id="best-stats"></div>
@@ -112,10 +112,9 @@
       <button id="achievement-continue" class="primary">Continue</button>
     </div>
   </div>
-  <!-- Include Web3 providers and wallet integration scripts -->
+  <!-- Ethers.js and wallet integration for ETH -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-  <script src="wallet_exodus_integration.js"></script>
+  <script src="wallet_eth_integration.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
