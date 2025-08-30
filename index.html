@@ -1,373 +1,270 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Hidden Object Game</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        header {
-            background-color: #4a90e2;
-            color: #fff;
-            width: 100%;
-            padding: 1rem;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        #game-container {
-            margin-top: 2rem;
-            width: 80%;
-            max-width: 700px;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            padding: 1rem;
-        }
-        button {
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
-            cursor: pointer;
-            border: none;
-            border-radius: 4px;
-        }
-        button.primary {
-            background-color: #4a90e2;
-            color: white;
-        }
-        button.secondary {
-            background-color: #ccc;
-            color: #333;
-        }
-        #hidden-object-area {
-            position: relative;
-            width: 100%;
-            height: 320px;
-            background: linear-gradient(180deg, #83a4d4 0%, #b6fbff 100%);
-            overflow: hidden;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-        .object {
-            position: absolute;
-            width: 32px;
-            height: 32px;
-            color: #ffd700;
-            font-size: 32px;
-            text-align: center;
-            line-height: 32px;
-            cursor: pointer;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-        .spark {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background-color: #ffd700;
-            border-radius: 50%;
-            opacity: 0.8;
-            animation: sparkle 0.6s forwards;
-        }
-        @keyframes sparkle {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(0.1); opacity: 0; }
-        }
-        .bomb {
-            position: absolute;
-            width: 32px;
-            height: 32px;
-            background-color: #ff5252;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-        }
-        .bonus {
-            position: absolute;
-            width: 32px;
-            height: 32px;
-            background-color: #ffc107;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            animation: bounce 1.5s infinite;
-        }
-        .time-item {
-            position: absolute;
-            width: 32px;
-            height: 32px;
-            background-color: #4caf50;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            animation: bounce 1.5s infinite;
-        }
-        .life-item {
-            position: absolute;
-            width: 32px;
-            height: 32px;
-            background-color: #e91e63;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            animation: bounce 1.5s infinite;
-        }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-        #level-info, #coin-display, #lives-info, #score-info, #timer {
-            margin-bottom: 0.3rem;
-            font-weight: bold;
-        }
-        #progress-container {
-            width: 100%;
-            height: 14px;
-            background-color: #e0e0e0;
-            border-radius: 7px;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-        }
-        #progress-bar {
-            height: 100%;
-            width: 100%;
-            background-color: #4caf50;
-            transition: width 1s linear;
-        }
-        #controls {
-            margin-top: 1rem;
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-        #game-message {
-            margin-top: 0.5rem;
-            font-weight: bold;
-        }
-        #difficulty-select {
-            margin-top: 0.5rem;
-            padding: 0.4rem;
-            font-size: 1rem;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto Hidden Object Game</title>
+  <!--
+    Master version of the hidden object game.
+    Features:
+    * Difficulty selection (easy/normal/hard)
+    * Moving bombs, bonus coins, time and life pickups
+    * Boss star every 5th level requiring multiple clicks
+    * Achievements with toast notifications
+    * Pause/Resume functionality
+    * Dark mode toggle
+    * Dynamic backgrounds and progress bar that changes colour as time runs out
+  -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      background-color: #4a90e2;
+      color: #fff;
+      width: 100%;
+      padding: 1rem;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    #game-container {
+      margin-top: 2rem;
+      width: 80%;
+      max-width: 700px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 1rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+    }
+    button.primary { background-color: #4a90e2; color: #fff; }
+    button.secondary { background-color: #ccc; color: #333; }
+    #hidden-object-area {
+      position: relative;
+      width: 100%;
+      height: 320px;
+      background: linear-gradient(180deg, #83a4d4 0%, #b6fbff 100%);
+      overflow: hidden;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .object {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      color: #ffd700;
+      font-size: 32px;
+      text-align: center;
+      line-height: 32px;
+      cursor: pointer;
+      animation: pulse 2s infinite;
+    }
+    /* boss star (bigger and tougher) */
+    .boss-star {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      font-size: 48px;
+      line-height: 48px;
+      color: #ffeb3b;
+      cursor: pointer;
+      animation: pulseBoss 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    @keyframes pulseBoss {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+    }
+    .spark {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background-color: #ffd700;
+      border-radius: 50%;
+      opacity: 0.8;
+      animation: sparkle 0.6s forwards;
+    }
+    @keyframes sparkle {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0.1); opacity: 0; }
+    }
+    .bomb {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background-color: #ff5252;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .bonus {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background-color: #ffc107;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      animation: bounce 1.5s infinite;
+    }
+    .time-item {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background-color: #4caf50;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      animation: bounce 1.5s infinite;
+    }
+    .life-item {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background-color: #e91e63;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      animation: bounce 1.5s infinite;
+    }
+    @keyframes bounce {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    /* HUD elements */
+    #level-info, #coin-display, #lives-info, #score-info, #timer {
+      margin-bottom: 0.3rem;
+      font-weight: bold;
+    }
+    #progress-container {
+      width: 100%;
+      height: 14px;
+      background-color: #e0e0e0;
+      border-radius: 7px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 100%;
+      background-color: #4caf50;
+      transition: width 1s linear, background-color 1s linear;
+    }
+    #controls {
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    #game-message {
+      margin-top: 0.5rem;
+      font-weight: bold;
+    }
+    #difficulty-select {
+      margin-top: 0.5rem;
+      padding: 0.4rem;
+      font-size: 1rem;
+    }
+    /* achievement/toast message */
+    #achievement-message {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background-color: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      display: none;
+      z-index: 1000;
+    }
+    /* dark mode overrides */
+    body.dark-mode {
+      background-color: #121212;
+      color: #ddd;
+    }
+    body.dark-mode #game-container {
+      background-color: #1e1e1e;
+      border-color: #444;
+    }
+    body.dark-mode header {
+      background-color: #333;
+    }
+    body.dark-mode button.primary { background-color: #0066cc; }
+    body.dark-mode button.secondary { background-color: #555; color: #eee; }
+    body.dark-mode #progress-container { background-color: #444; }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Crypto Hidden Object Game (Demo)</h1>
-    </header>
-    <div id="game-container">
-        <div id="start-screen">
-            <p>Welcome to this hidden object demo game. Choose a difficulty level, then start. You start with a demo balance of 5 coins.</p>
-            <label for="difficulty-select">Difficulty:</label>
-            <select id="difficulty-select">
-                <option value="easy">Easy</option>
-                <option value="normal" selected>Normal</option>
-                <option value="hard">Hard</option>
-            </select>
-            <br/>
-            <button id="connect-wallet" class="secondary">Connect Wallet (Demo)</button>
-            <button id="start-game" class="primary">Start Game</button>
-            <div id="balance"></div>
-        </div>
-        <div id="game-screen" style="display:none;">
-            <div id="level-info"></div>
-            <div id="coin-display"></div>
-            <div id="lives-info"></div>
-            <div id="score-info"></div>
-            <div id="timer"></div>
-            <div id="progress-container"><div id="progress-bar"></div></div>
-            <div id="hidden-object-area"></div>
-            <div id="controls">
-                <button id="hint-button" class="secondary">Hint (Cost: 1 coin)</button>
-                <button id="reveal-button" class="secondary">Reveal All (Cost: 3 coins)</button>
-                <button id="reset-button" class="secondary">Reset Game</button>
-            </div>
-            <div id="game-message"></div>
-        </div>
+  <header>
+    <h1>Crypto Hidden Object Game (Demo)</h1>
+  </header>
+  <div id="game-container">
+    <div id="start-screen">
+      <p>Welcome to this hidden object demo game. Choose a difficulty level, then start. You start with a demo balance of 5 coins.</p>
+      <label for="difficulty-select">Difficulty:</label>
+      <select id="difficulty-select">
+        <option value="easy">Easy</option>
+        <option value="normal" selected>Normal</option>
+        <option value="hard">Hard</option>
+      </select>
+      <br/>
+      <button id="connect-wallet" class="secondary">Connect Wallet (Demo)</button>
+      <button id="start-game" class="primary">Start Game</button>
+      <div id="balance"></div>
     </div>
-    <script src="script.js"></script>
-</body>
-</html>
-            font-size: 1rem;
-            cursor: pointer;
-            border: none;
-            border-radius: 4px;
-        }
-        button.primary {
-            background-color: #4a90e2;
-            color: white;
-        }
-        button.secondary {
-            background-color: #ccc;
-            color: #333;
-        }
-        #hidden-object-area {
-            position: relative;
-            width: 100%;
-            height: 320px;
-            background: linear-gradient(180deg, #83a4d4 0%, #b6fbff 100%);
-            overflow: hidden;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-        .object {
-            position: absolute;
-            width: 32px;
-            height: 32px;
-            color: #ffd700;
-            font-size: 32px;
-            text-align: center;
-            line-height: 32px;
-            cursor: pointer;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-        .spark {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background-color: #ffd700;
-            border-radius: 50%;
-            opacity: 0.8;
-            animation: sparkle 0.6s forwards;
-        }
-        @keyframes sparkle {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(0.1); opacity: 0; }
-        }
-        .bomb {
-            position: absolute;
-            width: 32px;
-            height: 32px;
-            background-color: #ff5252;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-        }
-        .bonus {
-            position: absolute;
-            width: 32px;
-            height: 32px;
-            background-color: #ffc107;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            animation: bounce 1.5s infinite;
-        }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-        #level-info, #coin-display, #lives-info, #score-info, #timer {
-            margin-bottom: 0.3rem;
-            font-weight: bold;
-        }
-        #progress-container {
-            width: 100%;
-            height: 14px;
-            background-color: #e0e0e0;
-            border-radius: 7px;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-        }
-        #progress-bar {
-            height: 100%;
-            width: 100%;
-            background-color: #4caf50;
-            transition: width 1s linear;
-        }
-        #controls {
-            margin-top: 1rem;
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-        #game-message {
-            margin-top: 0.5rem;
-            font-weight: bold;
-        }
-        /* Difficulty select styling */
-        #difficulty-select {
-            margin-top: 0.5rem;
-            padding: 0.4rem;
-            font-size: 1rem;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>Crypto Hidden Object Game (Demo)</h1>
-    </header>
-    <div id="game-container">
-        <div id="start-screen">
-            <p>Welcome to this hidden object demo game. Choose a difficulty level, then start. You start with a demo balance of 5 coins.</p>
-            <label for="difficulty-select">Difficulty:</label>
-            <select id="difficulty-select">
-                <option value="easy">Easy</option>
-                <option value="normal" selected>Normal</option>
-                <option value="hard">Hard</option>
-            </select>
-            <br/>
-            <button id="connect-wallet" class="secondary">Connect Wallet (Demo)</button>
-            <button id="start-game" class="primary">Start Game</button>
-            <div id="balance"></div>
-        </div>
-        <div id="game-screen" style="display:none;">
-            <div id="level-info"></div>
-            <div id="coin-display"></div>
-            <div id="lives-info"></div>
-            <div id="score-info"></div>
-            <div id="timer"></div>
-            <div id="progress-container"><div id="progress-bar"></div></div>
-            <div id="hidden-object-area"></div>
-            <div id="controls">
-                <button id="hint-button" class="secondary">Hint (Cost: 1 coin)</button>
-                <button id="reveal-button" class="secondary">Reveal All (Cost: 3 coins)</button>
-                <button id="reset-button" class="secondary">Reset Game</button>
-            </div>
-            <div id="game-message"></div>
-        </div>
+    <div id="game-screen" style="display:none;">
+      <div id="level-info"></div>
+      <div id="coin-display"></div>
+      <div id="lives-info"></div>
+      <div id="score-info"></div>
+      <div id="timer"></div>
+      <div id="progress-container"><div id="progress-bar"></div></div>
+      <div id="hidden-object-area"></div>
+      <div id="controls">
+        <button id="hint-button" class="secondary">Hint (Cost: 1 coin)</button>
+        <button id="reveal-button" class="secondary">Reveal All (Cost: 3 coins)</button>
+        <button id="pause-button" class="secondary">Pause</button>
+        <button id="dark-button" class="secondary">Dark Mode</button>
+        <button id="reset-button" class="secondary">Reset Game</button>
+      </div>
+      <div id="game-message"></div>
     </div>
-    <script src="script.js"></script>
+  </div>
+  <div id="achievement-message"></div>
+  <script src="script.js"></script>
 </body>
 </html>
