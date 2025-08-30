@@ -1,58 +1,51 @@
-/* Universal wallet integration supporting MetaMask, Exodus Extension and Exodus Mobile/Desktop via WalletConnect.
-   Requires ethers.js and @walletconnect/web3-provider (via CDN). If window.ethereum is available, it uses the injected provider. Otherwise it falls back to WalletConnect.
-   Replace GAME_ADDRESS with your recipient address.
+/*
+  Wallet integration supporting MetaMask/Exodus Browser Extension AND Exodus mobile via WalletConnect.
+  Uses ethers.js and @walletconnect/ethereum-provider. You need an Infura project ID (or other RPC) for WalletConnect.
+  Replace INFURA_PROJECT_ID and GAME_ADDRESS with your values.
 */
 
+const INFURA_PROJECT_ID = 'YOUR_INFURA_PROJECT_ID';
 const GAME_ADDRESS = '0x8342904bdc6b023C7dC0213556b994428aa17fb9';
 
 let provider;
 let signer;
 let userAccount;
 
-async function connectUniversalWallet() {
-  if (window.ethereum) {
-    // Use injected provider (MetaMask, Exodus Extension, Brave etc.)
-    try {
+async function connectCryptoWallet() {
+  try {
+    // Case 1: browser extension provides window.ethereum (MetaMask, Exodus extension)
+    if (window.ethereum) {
       await window.ethereum.request({ method: 'eth_requestAccounts' });
       provider = new ethers.providers.Web3Provider(window.ethereum);
       signer = provider.getSigner();
       userAccount = await signer.getAddress();
-      const walletEl = document.getElementById('wallet-address');
-      if (walletEl) walletEl.textContent = `Wallet: ${userAccount.substring(0, 6)}...${userAccount.substring(userAccount.length - 4)}`;
+      updateAddressDisplay();
       await updateEthBalance();
       return;
-    } catch (err) {
-      console.error('Error connecting via injected provider:', err);
-      return;
     }
-  }
-  // Fallback to WalletConnect (for Exodus mobile/desktop)
-  if (typeof WalletConnectProvider === 'undefined') {
-    alert('WalletConnect provider not found. Please include @walletconnect/web3-provider script.');
-    return;
-  }
-  try {
-    const wcProvider = new WalletConnectProvider.default({
-      rpc: {
-        1: 'https://mainnet.infura.io/v3/your_infura_project_id'
-      },
-      qrcode: true
+    // Case 2: fallback to WalletConnect for Exodus mobile/desktop
+    const walletConnectProvider = new window.WalletConnectEthereumProvider({
+      projectId: INFURA_PROJECT_ID,
+      showQrModal: true,
+      chains: [1], // Ethereum mainnet; change if using testnet
+      methods: ['eth_sendTransaction','eth_signTransaction','personal_sign','eth_sign','eth_signTypedData']
     });
-    await wcProvider.enable();
-    provider = new ethers.providers.Web3Provider(wcProvider);
+    await walletConnectProvider.enable();
+    provider = new ethers.providers.Web3Provider(walletConnectProvider);
     signer = provider.getSigner();
     userAccount = await signer.getAddress();
-    const walletEl = document.getElementById('wallet-address');
-    if (walletEl) walletEl.textContent = `Wallet: ${userAccount.substring(0, 6)}...${userAccount.substring(userAccount.length - 4)}`;
+    updateAddressDisplay();
     await updateEthBalance();
-    wcProvider.on('disconnect', () => {
-      console.log('WalletConnect disconnected');
-      provider = null;
-      signer = null;
-      userAccount = null;
-    });
   } catch (err) {
-    console.error('Error connecting via WalletConnect:', err);
+    console.error('Failed to connect wallet:', err);
+    alert('Could not connect to wallet.');
+  }
+}
+
+function updateAddressDisplay() {
+  const walletEl = document.getElementById('wallet-address');
+  if (walletEl && userAccount) {
+    walletEl.textContent = `Wallet: ${userAccount.substring(0,6)}...${userAccount.substring(userAccount.length-4)}`;
   }
 }
 
@@ -64,17 +57,21 @@ async function updateEthBalance() {
     const balEl = document.getElementById('token-balance');
     if (balEl) balEl.textContent = `ETH Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`;
   } catch (err) {
-    console.error('Failed to fetch ETH balance:', err);
+    console.error('Failed to get ETH balance:', err);
   }
 }
 
+// Spend ETH by sending to the game's treasury address. Requires user confirmation.
 async function spendEth(amountEth) {
   if (!signer || !userAccount) {
     alert('Please connect your wallet first.');
     return;
   }
   try {
-    const tx = await signer.sendTransaction({ to: GAME_ADDRESS, value: ethers.utils.parseEther(amountEth.toString()) });
+    const tx = await signer.sendTransaction({
+      to: GAME_ADDRESS,
+      value: ethers.utils.parseEther(amountEth.toString())
+    });
     console.log('Transaction sent:', tx.hash);
     await tx.wait();
     console.log('Transaction confirmed');
@@ -83,3 +80,6 @@ async function spendEth(amountEth) {
     console.error('Failed to send ETH:', err);
   }
 }
+
+// Attach this function to your connect wallet button in script.js:
+// connectWalletBtn.addEventListener('click', connectCryptoWallet);
