@@ -1,4 +1,4 @@
-// Advanced hidden object game with moving bombs, bonus coins, difficulty levels and more.
+// Extra advanced hidden object game with time and life pickups, moving bombs, bonus coins and difficulty levels.
 
 const startGameBtn = document.getElementById('start-game');
 const connectWalletBtn = document.getElementById('connect-wallet');
@@ -18,16 +18,16 @@ const timerEl = document.getElementById('timer');
 const progressBar = document.getElementById('progress-bar');
 const gameMessage = document.getElementById('game-message');
 
-// Persistent values via localStorage
 let balance = parseInt(localStorage.getItem('demoBalance') || '5', 10);
 let maxLevel = parseInt(localStorage.getItem('maxLevel') || '0', 10);
 
-// Game state variables
 let level = 1;
 let lives = 3;
 let objects = [];
 let bombs = [];
 let bonuses = [];
+let timeItems = [];
+let lifeItems = [];
 let timeLeft = 0;
 let totalTime = 0;
 let timerInterval;
@@ -35,7 +35,7 @@ let moveInterval;
 let difficulty = 'normal';
 
 const difficultySettings = {
-  easy:   { baseTime: 70, timeDec: 10, bombsFactor: 0.3, starsOffset: 2 },
+  easy:   { baseTime: 75, timeDec: 10, bombsFactor: 0.3, starsOffset: 2 },
   normal: { baseTime: 60, timeDec: 8,  bombsFactor: 0.5, starsOffset: 2 },
   hard:   { baseTime: 50, timeDec: 6,  bombsFactor: 1.0, starsOffset: 3 }
 };
@@ -46,7 +46,7 @@ function updateBalanceDisplay() {
   coinDisplay.textContent = `Coins: ${balance}`;
 }
 
-function updateLevelInfo() {
+function updateInfo() {
   levelInfo.textContent = `Level: ${level}`;
   livesInfo.textContent = `Lives: ${lives}`;
   scoreInfo.textContent = `Highest level: ${maxLevel}`;
@@ -75,9 +75,9 @@ function createSparkle(x, y) {
     const spark = document.createElement('div');
     spark.className = 'spark';
     const angle = Math.random() * Math.PI * 2;
-    const distance = Math.random() * 30 + 10;
-    spark.style.left = `${x + Math.cos(angle) * distance - 4}px`;
-    spark.style.top = `${y + Math.sin(angle) * distance - 4}px`;
+    const dist = Math.random() * 30 + 10;
+    spark.style.left = `${x + Math.cos(angle) * dist - 4}px`;
+    spark.style.top = `${y + Math.sin(angle) * dist - 4}px`;
     hiddenObjectArea.appendChild(spark);
     setTimeout(() => spark.remove(), 600);
   }
@@ -95,7 +95,7 @@ function startTimer() {
       updateProgressBar(0);
       stopTimer();
       gameMessage.textContent = `Time's up! You reached level ${level}. Click Reset Game to try again.`;
-      disableAllInteractions();
+      disableAll();
       return;
     }
     updateTimerDisplay();
@@ -114,10 +114,12 @@ function stopTimer() {
   }
 }
 
-function disableAllInteractions() {
-  objects.forEach(o => o.style.pointerEvents = 'none');
+function disableAll() {
+  objects.forEach(obj => obj.style.pointerEvents = 'none');
   bombs.forEach(b => b.style.pointerEvents = 'none');
   bonuses.forEach(b => b.style.pointerEvents = 'none');
+  timeItems.forEach(t => t.style.pointerEvents = 'none');
+  lifeItems.forEach(l => l.style.pointerEvents = 'none');
   hintButton.disabled = true;
   revealButton.disabled = true;
 }
@@ -128,22 +130,23 @@ function initLevel() {
   objects = [];
   bombs = [];
   bonuses = [];
-  // Read difficulty
+  timeItems = [];
+  lifeItems = [];
   const settings = difficultySettings[difficulty];
   totalTime = Math.max(settings.baseTime - (level - 1) * settings.timeDec, 15);
   timeLeft = totalTime;
   updateTimerDisplay();
   updateProgressBar(1);
-  updateLevelInfo();
-  // Randomize background gradient
-  const gradients = [
+  updateInfo();
+  // random background
+  const backgrounds = [
     'linear-gradient(180deg, #83a4d4 0%, #b6fbff 100%)',
     'linear-gradient(180deg, #ffecd2 0%, #fcb69f 100%)',
     'linear-gradient(180deg, #a1c4fd 0%, #c2e9fb 100%)',
     'linear-gradient(180deg, #f8ffae 0%, #43c6ac 100%)'
   ];
-  hiddenObjectArea.style.background = gradients[Math.floor(Math.random() * gradients.length)];
-  // Spawn stars
+  hiddenObjectArea.style.background = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+  // spawn stars
   const numStars = level + settings.starsOffset;
   for (let i = 0; i < numStars; i++) {
     const star = document.createElement('div');
@@ -153,17 +156,15 @@ function initLevel() {
     star.style.top = Math.floor(Math.random() * 80 + 10) + '%';
     star.addEventListener('click', (e) => {
       const rect = hiddenObjectArea.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      createSparkle(x, y);
-      star.style.display = 'none';
+      createSparkle(e.clientX - rect.left, e.clientY - rect.top);
+      star.remove();
       objects.splice(objects.indexOf(star), 1);
       checkCompletion();
     });
     objects.push(star);
     hiddenObjectArea.appendChild(star);
   }
-  // Spawn bombs
+  // spawn bombs
   const numBombs = Math.max(1, Math.floor(level * settings.bombsFactor));
   for (let i = 0; i < numBombs; i++) {
     const bomb = document.createElement('div');
@@ -171,14 +172,13 @@ function initLevel() {
     bomb.textContent = '💣';
     bomb.style.left = Math.floor(Math.random() * 90 + 5) + '%';
     bomb.style.top = Math.floor(Math.random() * 80 + 10) + '%';
-    // assign random velocity
     bomb.dataset.vx = (Math.random() * 0.6 + 0.2).toString();
     bomb.dataset.vy = (Math.random() * 0.6 + 0.2).toString();
     bomb.addEventListener('click', () => handleBombClick(bomb));
     bombs.push(bomb);
     hiddenObjectArea.appendChild(bomb);
   }
-  // Possibly spawn bonus coin (50% chance)
+  // spawn bonus coin (50%)
   if (Math.random() < 0.5) {
     const bonus = document.createElement('div');
     bonus.className = 'bonus';
@@ -195,6 +195,42 @@ function initLevel() {
     bonuses.push(bonus);
     hiddenObjectArea.appendChild(bonus);
   }
+  // spawn time item (40%)
+  if (Math.random() < 0.4) {
+    const timeItem = document.createElement('div');
+    timeItem.className = 'time-item';
+    timeItem.textContent = '⏱';
+    timeItem.style.left = Math.floor(Math.random() * 90 + 5) + '%';
+    timeItem.style.top = Math.floor(Math.random() * 80 + 10) + '%';
+    timeItem.addEventListener('click', () => {
+      timeItem.remove();
+      timeItems.splice(timeItems.indexOf(timeItem), 1);
+      timeLeft += 10;
+      totalTime += 10;
+      updateTimerDisplay();
+      updateProgressBar(timeLeft / totalTime);
+      gameMessage.textContent = '+10s time!';
+    });
+    timeItems.push(timeItem);
+    hiddenObjectArea.appendChild(timeItem);
+  }
+  // spawn life item (40%)
+  if (Math.random() < 0.4) {
+    const lifeItem = document.createElement('div');
+    lifeItem.className = 'life-item';
+    lifeItem.textContent = '❤️';
+    lifeItem.style.left = Math.floor(Math.random() * 90 + 5) + '%';
+    lifeItem.style.top = Math.floor(Math.random() * 80 + 10) + '%';
+    lifeItem.addEventListener('click', () => {
+      lifeItem.remove();
+      lifeItems.splice(lifeItems.indexOf(lifeItem), 1);
+      lives += 1;
+      updateInfo();
+      gameMessage.textContent = '+1 life!';
+    });
+    lifeItems.push(lifeItem);
+    hiddenObjectArea.appendChild(lifeItem);
+  }
   startTimer();
   moveBombs();
   hintButton.disabled = false;
@@ -202,18 +238,14 @@ function initLevel() {
 }
 
 function moveBombs() {
-  // update bomb positions every 60ms
   moveInterval = setInterval(() => {
-    const areaRect = hiddenObjectArea.getBoundingClientRect();
     bombs.forEach(bomb => {
       let vx = parseFloat(bomb.dataset.vx);
       let vy = parseFloat(bomb.dataset.vy);
       let x = parseFloat(bomb.style.left);
       let y = parseFloat(bomb.style.top);
-      // update
       x += vx;
       y += vy;
-      // bounce off walls
       if (x < 0 || x > 95) {
         vx = -vx;
         bomb.dataset.vx = vx.toString();
@@ -222,7 +254,6 @@ function moveBombs() {
         vy = -vy;
         bomb.dataset.vy = vy.toString();
       }
-      // clamp
       x = Math.max(0, Math.min(95, x));
       y = Math.max(10, Math.min(85, y));
       bomb.style.left = `${x}%`;
@@ -236,21 +267,20 @@ function handleBombClick(bomb) {
   bombs.splice(bombs.indexOf(bomb), 1);
   lives--;
   if (lives < 0) lives = 0;
-  // reduce time
   timeLeft = Math.max(0, timeLeft - 5);
-  updateLevelInfo();
+  updateInfo();
   updateTimerDisplay();
   updateProgressBar(timeLeft / totalTime);
   if (lives <= 0) {
     stopTimer();
     gameMessage.textContent = `Game over! You lost all lives. You reached level ${level}. Click Reset Game to try again.`;
-    disableAllInteractions();
+    disableAll();
     return;
   }
   if (timeLeft === 0) {
     stopTimer();
     gameMessage.textContent = `Time's up! You reached level ${level}. Click Reset Game to try again.`;
-    disableAllInteractions();
+    disableAll();
     return;
   }
 }
@@ -262,7 +292,7 @@ startGameBtn.addEventListener('click', () => {
   startScreen.style.display = 'none';
   gameScreen.style.display = 'block';
   updateBalanceDisplay();
-  updateLevelInfo();
+  updateInfo();
   initLevel();
 });
 
@@ -280,10 +310,10 @@ hintButton.addEventListener('click', () => {
   balance -= 1;
   updateBalanceDisplay();
   const obj = objects[0];
-  const originalColor = obj.style.color;
+  const orig = obj.style.color;
   obj.style.color = '#00ff00';
   setTimeout(() => {
-    obj.style.color = originalColor;
+    obj.style.color = orig;
   }, 800);
 });
 
@@ -299,12 +329,12 @@ revealButton.addEventListener('click', () => {
   balance -= 3;
   updateBalanceDisplay();
   objects.forEach(obj => {
-    obj.dataset.orig = obj.style.color;
+    obj.dataset.origColor = obj.style.color;
     obj.style.color = '#00ff00';
   });
   setTimeout(() => {
     objects.forEach(obj => {
-      obj.style.color = obj.dataset.orig;
+      obj.style.color = obj.dataset.origColor;
     });
   }, 2000);
 });
@@ -314,7 +344,7 @@ resetButton.addEventListener('click', () => {
   lives = 3;
   stopTimer();
   updateBalanceDisplay();
-  updateLevelInfo();
+  updateInfo();
   initLevel();
 });
 
@@ -329,13 +359,13 @@ function checkCompletion() {
       localStorage.setItem('maxLevel', maxLevel.toString());
     }
     level++;
-    updateLevelInfo();
+    updateInfo();
     setTimeout(() => {
       initLevel();
     }, 2000);
   }
 }
 
-// Initial display on page load
+// Initialize displays on load
 updateBalanceDisplay();
-updateLevelInfo();
+updateInfo();
