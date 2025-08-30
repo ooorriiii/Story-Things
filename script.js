@@ -1,9 +1,34 @@
-// This script powers the most advanced version of the hidden object game.
-// It builds upon previous iterations to include themes, difficulty modes,
-// bombs, bonuses, time and life items, boss stars, achievements, pause/resume,
-// dark mode, story interludes and a shop for power‑ups.
+// Ultimate game script with sound, animations and extra graphics.
+// This file extends the previous audio version by adding explosion effects,
+// coin fly animations, a gentle particle background, and persistent best scores.
 
-// Grab references to DOM elements
+// Audio context and helper functions for sounds (same as script_audio.js)
+const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContextClass();
+function playTone(freq, duration) {
+  const oscillator = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  oscillator.type = 'sine';
+  oscillator.frequency.value = freq;
+  const now = audioCtx.currentTime;
+  oscillator.start(now);
+  gainNode.gain.setValueAtTime(0.1, now);
+  gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+  oscillator.stop(now + duration);
+}
+function playCollect() { playTone(850, 0.15); }
+function playBonus() { playTone(1000, 0.2); }
+function playTimeSound() { playTone(600, 0.25); }
+function playLifeSound() { playTone(400, 0.25); }
+function playBombSound() { playTone(150, 0.3); }
+function playBossDefeat() { playTone(350, 0.5); }
+function playPurchase() { playTone(500, 0.2); }
+function playAchievementSound() { playTone(700, 0.4); }
+function playStorySound() { playTone(900, 0.15); }
+
+// DOM references
 const startScreen = document.getElementById('start-screen');
 const gameScreen = document.getElementById('game-screen');
 const hiddenArea = document.getElementById('hidden-object-area');
@@ -14,6 +39,7 @@ const livesInfo = document.getElementById('lives-info');
 const highestInfo = document.getElementById('highest-info');
 const gameMessage = document.getElementById('game-message');
 const balanceDisplay = document.getElementById('balance-display');
+const bestStatsEl = document.getElementById('best-stats');
 const overlay = document.getElementById('overlay');
 const storyPanel = document.getElementById('story-panel');
 const storyTextEl = document.getElementById('story-text');
@@ -36,63 +62,38 @@ const pauseBtn = document.getElementById('pause-button');
 const darkModeBtn = document.getElementById('darkmode-button');
 const resetBtn = document.getElementById('reset-button');
 
-// Difficulty settings controlling initial time, star and bomb counts
+// Difficulty settings
 const difficultySettings = {
-  'Easy':    { time: 60, stars: 3, bombs: 1 },
-  'Normal':  { time: 50, stars: 4, bombs: 2 },
-  'Hard':    { time: 40, stars: 5, bombs: 3 }
+  'Easy':   { time: 60, stars: 3, bombs: 1 },
+  'Normal': { time: 50, stars: 4, bombs: 2 },
+  'Hard':   { time: 40, stars: 5, bombs: 3 }
 };
 
-// Theme definitions. Each theme defines icons and a background gradient for the play area.
+// Themes with icons and backgrounds
 const themes = {
   default: {
-    object: '⭐',
-    bonus: '💰',
-    time: '⌛',
-    life: '❤️',
-    bomb: '💣',
-    boss: '🌟',
+    object: '⭐', bonus: '💰', time: '⌛', life: '❤️', bomb: '💣', boss: '🌟',
     background: 'linear-gradient(180deg, #83a4d4 0%, #b6fbff 100%)'
   },
   time: {
-    object: '🕰️',
-    bonus: '📜',
-    time: '⏳',
-    life: '🔮',
-    bomb: '⌛',
-    boss: '🕰️',
+    object: '🕰️', bonus: '📜', time: '⏳', life: '🔮', bomb: '⌛', boss: '🕰️',
     background: 'linear-gradient(180deg, #ffd89b 0%, #19547b 100%)'
   },
   underwater: {
-    object: '🐚',
-    bonus: '🦈',
-    time: '🐠',
-    life: '🐙',
-    bomb: '💣',
-    boss: '🐳',
+    object: '🐚', bonus: '🦈', time: '🐠', life: '🐙', bomb: '💣', boss: '🐳',
     background: 'linear-gradient(180deg, #00c6fb 0%, #005bea 100%)'
   },
   dream: {
-    object: '🌙',
-    bonus: '🌟',
-    time: '💤',
-    life: '🦋',
-    bomb: '☁️',
-    boss: '🌈',
+    object: '🌙', bonus: '🌟', time: '💤', life: '🦋', bomb: '☁️', boss: '🌈',
     background: 'linear-gradient(180deg, #e0c3fc 0%, #8ec5fc 100%)'
   },
   village: {
-    object: '🏡',
-    bonus: '🐔',
-    time: '🌿',
-    life: '🌾',
-    bomb: '🚜',
-    boss: '🌳',
+    object: '🏡', bonus: '🐔', time: '🌿', life: '🌾', bomb: '🚜', boss: '🌳',
     background: 'linear-gradient(180deg, #eaf2d7 0%, #d5ebba 100%)'
   }
 };
 
-// Stories shown at the start of selected levels to add a narrative flavour
+// Stories for narrative
 const stories = [
   'You enter a mysterious realm where hidden objects hold the key to untold fortunes.',
   'Whispers of ancient secrets echo through the air as you venture deeper into the unknown.',
@@ -102,7 +103,7 @@ const stories = [
   'Time bends as you travel through eras, searching for clues that bridge past and future.'
 ];
 
-// Achievements definitions: when these milestones are reached, a notification will appear
+// Achievements
 const achievementDefs = [
   { id: 'level5',    condition: () => level >= 5,         message: 'Great! You reached level 5!' },
   { id: 'level10',   condition: () => level >= 10,        message: 'Impressive! Level 10 achieved!' },
@@ -112,38 +113,13 @@ const achievementDefs = [
   { id: 'coins200',  condition: () => coins >= 200,       message: 'Wealthy adventurer! 200 coins!' }
 ];
 
-// Shop items available after each level
+// Shop items
 const shopItems = [
-  {
-    name: 'Shield',
-    cost: 5,
-    description: 'Ignore the next bomb explosion.',
-    apply: () => { shieldActive = true; }
-  },
-  {
-    name: 'Time Freeze',
-    cost: 8,
-    description: 'Freeze time for 5 seconds in the next level.',
-    apply: () => { freezeCount++; }
-  },
-  {
-    name: 'Double Coins',
-    cost: 10,
-    description: 'Double coin rewards in the next level.',
-    apply: () => { doubleCoinsActive = true; }
-  },
-  {
-    name: 'Reveal All',
-    cost: 4,
-    description: 'One-time reveal of all objects in the next level.',
-    apply: () => { revealCount++; }
-  },
-  {
-    name: 'Slow Bombs',
-    cost: 6,
-    description: 'Bombs move slower in the next level.',
-    apply: () => { slowBombActive = true; }
-  }
+  { name: 'Shield', cost: 5, description: 'Ignore the next bomb explosion.', apply: () => { shieldActive = true; } },
+  { name: 'Time Freeze', cost: 8, description: 'Freeze time for 5 seconds in the next level.', apply: () => { freezeCount++; } },
+  { name: 'Double Coins', cost: 10, description: 'Double coin rewards in the next level.', apply: () => { doubleCoinsActive = true; } },
+  { name: 'Reveal All', cost: 4, description: 'One-time reveal of all objects in the next level.', apply: () => { revealCount++; } },
+  { name: 'Slow Bombs', cost: 6, description: 'Bombs move slower in the next level.', apply: () => { slowBombActive = true; } }
 ];
 
 // Game state variables
@@ -155,7 +131,7 @@ let lives;
 let highestLevel;
 let stars = [];
 let bombs = [];
-let bonusCoins = [];
+let bonusCoinsArr = [];
 let timeItems = [];
 let lifeItems = [];
 let bossStar = null;
@@ -164,6 +140,7 @@ let timeLeft;
 let totalTime;
 let timerInterval;
 let bombInterval;
+let particleInterval;
 let paused = false;
 let darkMode = false;
 let shieldActive = false;
@@ -174,80 +151,128 @@ let revealCount = 0;
 let slowBombActive = false;
 let achievements = {};
 let storyIndex = 0;
+let bestLevel = 0;
+let bestCoins = 0;
 
-// Initialise achievements to false
+// Initialize achievements flags
 achievementDefs.forEach(def => { achievements[def.id] = false; });
 
-// Utility: pick a random position within the hidden area
+// Utility to pick random position
 function randomPosition() {
   const x = Math.random() * 90 + 5;
   const y = Math.random() * 90 + 5;
   return { left: x + '%', top: y + '%' };
 }
 
-// Update the score bar display
+// Update score bar and best stats
 function updateScoreBar() {
   levelInfo.textContent = `Level: ${level}`;
   coinsDisplay.textContent = `Coins: ${coins}`;
   livesInfo.textContent = `Lives: ${lives}`;
   highestInfo.textContent = `Highest: ${highestLevel}`;
   balanceDisplay.textContent = `Balance: ${coins} coins`;
+  // Update best stats display
+  bestStatsEl.textContent = `Best Level: ${bestLevel} | Best Coins: ${bestCoins}`;
 }
 
-// Update the progress bar based on time left
+// Update progress bar
 function updateProgressBar() {
   const ratio = timeLeft / totalTime;
   progressBar.style.width = Math.max(0, ratio * 100) + '%';
-  // Change color from green to red as time decreases
-  if (ratio > 0.5) {
-    progressBar.style.background = '#4caf50';
-  } else if (ratio > 0.25) {
-    progressBar.style.background = '#ff9800';
-  } else {
-    progressBar.style.background = '#f44336';
-  }
+  if (ratio > 0.5) progressBar.style.background = '#4caf50';
+  else if (ratio > 0.25) progressBar.style.background = '#ff9800';
+  else progressBar.style.background = '#f44336';
 }
 
-// Show overlay with specific panel
+// Create an explosion at screen coordinates x,y
+function createExplosion(pageX, pageY) {
+  const explosion = document.createElement('div');
+  explosion.className = 'explosion';
+  explosion.style.left = pageX - 20 + 'px';
+  explosion.style.top = pageY - 20 + 'px';
+  document.body.appendChild(explosion);
+  setTimeout(() => explosion.remove(), 600);
+}
+
+// Animate a coin flying from start coordinates to the coins display
+function animateCoinToScore(pageX, pageY) {
+  const coin = document.createElement('div');
+  coin.className = 'coin-fly';
+  // Use bonus icon for flying coin
+  coin.textContent = themes[theme].bonus;
+  coin.style.left = pageX + 'px';
+  coin.style.top = pageY + 'px';
+  document.body.appendChild(coin);
+  const targetRect = coinsDisplay.getBoundingClientRect();
+  const dx = targetRect.left + targetRect.width / 2 - pageX;
+  const dy = targetRect.top + targetRect.height / 2 - pageY;
+  // trigger the transition
+  requestAnimationFrame(() => {
+    coin.style.transform = `translate(${dx}px, ${dy}px)`;
+    coin.style.opacity = '0';
+  });
+  setTimeout(() => coin.remove(), 700);
+}
+
+// Spawn a decorative particle falling down the play area
+function spawnParticle() {
+  const particle = document.createElement('div');
+  particle.className = 'particle';
+  // Random color for variation
+  const colors = ['#ffeb3b', '#ff9800', '#00bcd4', '#8bc34a', '#e91e63'];
+  particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+  const startX = Math.random() * hiddenArea.clientWidth;
+  particle.style.left = startX + 'px';
+  particle.style.top = '-10px';
+  hiddenArea.appendChild(particle);
+  // Compute movement distance
+  const distance = hiddenArea.clientHeight + 20;
+  requestAnimationFrame(() => {
+    particle.style.transform = `translateY(${distance}px)`;
+    particle.style.opacity = '0';
+  });
+  setTimeout(() => {
+    if (particle.parentNode) particle.remove();
+  }, 4000);
+}
+
+function startParticles() {
+  if (particleInterval) clearInterval(particleInterval);
+  particleInterval = setInterval(spawnParticle, 500);
+}
+
+function stopParticles() {
+  if (particleInterval) clearInterval(particleInterval);
+}
+
+// Show overlay panel
 function showOverlay(panel) {
   overlay.style.display = 'flex';
-  // hide all panels first
   storyPanel.style.display = 'none';
   shopPanel.style.display = 'none';
   achievementPanel.style.display = 'none';
-  if (panel === 'story') {
-    storyPanel.style.display = 'block';
-  } else if (panel === 'shop') {
-    shopPanel.style.display = 'block';
-  } else if (panel === 'achievement') {
-    achievementPanel.style.display = 'block';
-  }
-  // Pause the game while overlay is active
+  if (panel === 'story') storyPanel.style.display = 'block';
+  else if (panel === 'shop') shopPanel.style.display = 'block';
+  else if (panel === 'achievement') achievementPanel.style.display = 'block';
   pauseGame(true);
 }
 
-// Hide overlay and resume game if appropriate
 function hideOverlay() {
   overlay.style.display = 'none';
-  // Only resume if the game is not globally paused via pause button
-  if (!paused) {
-    pauseGame(false);
-  }
+  if (!paused) pauseGame(false);
 }
 
-// Show a story message at the start of certain levels
 function showStory() {
   const msg = stories[storyIndex % stories.length];
   storyIndex++;
   storyTextEl.textContent = msg;
+  playStorySound();
   showOverlay('story');
 }
 
-// Populate and show the shop
 function showShop() {
-  // Clear previous items
   shopItemsEl.innerHTML = '';
-  shopItems.forEach((item, index) => {
+  shopItems.forEach(item => {
     const div = document.createElement('div');
     div.className = 'shop-item';
     const nameSpan = document.createElement('span');
@@ -259,7 +284,6 @@ function showShop() {
     div.appendChild(nameSpan);
     div.appendChild(descSpan);
     div.addEventListener('click', () => {
-      // Attempt to purchase
       if (coins >= item.cost) {
         coins -= item.cost;
         updateScoreBar();
@@ -267,6 +291,7 @@ function showShop() {
         div.style.opacity = '0.4';
         div.style.pointerEvents = 'none';
         gameMessage.textContent = `Purchased ${item.name}!`;
+        playPurchase();
       } else {
         gameMessage.textContent = `Not enough coins for ${item.name}.`;
       }
@@ -276,28 +301,22 @@ function showShop() {
   showOverlay('shop');
 }
 
-// Show an achievement notification
 function showAchievement(message) {
   achievementTextEl.textContent = message;
+  playAchievementSound();
   showOverlay('achievement');
 }
 
-// Pause or resume game components
 function pauseGame(state) {
   if (state) {
-    // Pause timer
     if (timerInterval) clearInterval(timerInterval);
-    // Pause bomb movement
     if (bombInterval) clearInterval(bombInterval);
   } else {
-    // Resume timer if not freeze active
     if (timeLeft > 0) startTimer();
-    // Resume bomb movement
     startBombMovement();
   }
 }
 
-// Start the countdown timer
 function startTimer() {
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
@@ -306,21 +325,19 @@ function startTimer() {
     updateProgressBar();
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
-      // Lose a life when time runs out
       lives--;
       gameMessage.textContent = 'Time is up! You lost a life.';
+      playBombSound();
       updateScoreBar();
       if (lives <= 0) {
         endGame('You ran out of lives!');
       } else {
-        // Start a new level after short pause
         setTimeout(() => handleLevelEnd(), 1500);
       }
     }
   }, 1000);
 }
 
-// Freeze time for a duration (used by Time Freeze power)
 function activateFreeze() {
   if (freezeCount > 0) {
     freezeCount--;
@@ -333,50 +350,44 @@ function activateFreeze() {
   }
 }
 
-// Start bomb movement interval
 function startBombMovement() {
   if (bombInterval) clearInterval(bombInterval);
   bombInterval = setInterval(() => {
     if (paused || freezeActive) return;
     bombs.forEach(bombObj => {
-      const { element, dx, dy } = bombObj;
-      let rect = hiddenArea.getBoundingClientRect();
-      let x = parseFloat(element.style.left);
-      let y = parseFloat(element.style.top);
-      // Adjust speed if slow bomb power is active
-      const speedFactor = slowBombActive ? 0.5 : 1;
-      let newX = x + dx * speedFactor;
-      let newY = y + dy * speedFactor;
-      // Bounce off walls
+      const el = bombObj.element;
+      let x = parseFloat(el.style.left);
+      let y = parseFloat(el.style.top);
+      const factor = slowBombActive ? 0.5 : 1;
+      let newX = x + bombObj.dx * factor;
+      let newY = y + bombObj.dy * factor;
       if (newX < 0 || newX > 95) {
         bombObj.dx *= -1;
-        newX = x + bombObj.dx * speedFactor;
+        newX = x + bombObj.dx * factor;
       }
       if (newY < 0 || newY > 95) {
         bombObj.dy *= -1;
-        newY = y + bombObj.dy * speedFactor;
+        newY = y + bombObj.dy * factor;
       }
-      element.style.left = newX + '%';
-      element.style.top = newY + '%';
+      el.style.left = newX + '%';
+      el.style.top = newY + '%';
     });
   }, 50);
 }
 
-// Clear all game elements from the play area
 function clearField() {
   hiddenArea.innerHTML = '';
   stars = [];
   bombs = [];
-  bonusCoins = [];
+  bonusCoinsArr = [];
   timeItems = [];
   lifeItems = [];
   bossStar = null;
   bossClicks = 0;
+  stopParticles();
 }
 
-// Start a new game session
 function initGame() {
-  // Reset variables
   level = 1;
   coins = 5;
   lives = 3;
@@ -389,19 +400,20 @@ function initGame() {
   doubleCoinsActive = false;
   revealCount = 0;
   slowBombActive = false;
-  // Reset achievements
   achievementDefs.forEach(def => { achievements[def.id] = false; });
   storyIndex = 0;
+  // load best stats from localStorage
+  bestLevel = parseInt(localStorage.getItem('bestLevel') || '0');
+  bestCoins = parseInt(localStorage.getItem('bestCoins') || '0');
   gameMessage.textContent = '';
   updateScoreBar();
-  // Show start screen
   startScreen.style.display = 'block';
   gameScreen.style.display = 'none';
   clearField();
 }
 
-// Start the game using current selections
 function startGame() {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
   difficulty = difficultySelect.value;
   theme = themeSelect.value;
   coins = 5;
@@ -417,26 +429,23 @@ function startGame() {
   storyIndex = 0;
   gameMessage.textContent = '';
   updateScoreBar();
-  // Apply theme to play area background
   hiddenArea.style.background = themes[theme].background;
-  // Hide start screen and show game screen
   startScreen.style.display = 'none';
   gameScreen.style.display = 'block';
-  // Begin with a story interlude
   showStory();
 }
 
-// Set up a level: generate objects, bombs, bonus items
 function setupLevel() {
   clearField();
   const diff = difficultySettings[difficulty];
-  // Compute star and bomb counts by increasing difficulty as level grows
   const starCount = diff.stars + Math.floor((level - 1) / 2);
   const bombCount = diff.bombs + Math.floor(level / 2);
   totalTime = Math.max(20, diff.time - (level - 1) * 2);
   timeLeft = totalTime;
   updateProgressBar();
-  // Create stars
+  // Start particle background
+  startParticles();
+  // Stars
   for (let i = 0; i < starCount; i++) {
     const obj = document.createElement('div');
     obj.className = 'object';
@@ -448,7 +457,7 @@ function setupLevel() {
     hiddenArea.appendChild(obj);
     stars.push(obj);
   }
-  // Create bombs
+  // Bombs
   for (let i = 0; i < bombCount; i++) {
     const bombEl = document.createElement('div');
     bombEl.className = 'bomb';
@@ -456,14 +465,13 @@ function setupLevel() {
     const pos = randomPosition();
     bombEl.style.left = pos.left;
     bombEl.style.top = pos.top;
-    // Random movement direction
     const dx = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random());
     const dy = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random());
     bombEl.addEventListener('click', () => handleBombClick(bombEl));
     hiddenArea.appendChild(bombEl);
     bombs.push({ element: bombEl, dx, dy });
   }
-  // Possibly spawn a boss star every 5 levels
+  // Boss star
   if (level % 5 === 0) {
     const boss = document.createElement('div');
     boss.className = 'boss-star';
@@ -476,12 +484,14 @@ function setupLevel() {
       bossClicks--;
       boss.style.transform = `scale(${1 + (3 - bossClicks) * 0.1})`;
       if (bossClicks <= 0) {
-        // Boss defeated
+        const rect = boss.getBoundingClientRect();
         hiddenArea.removeChild(boss);
         bossStar = null;
         coins += doubleCoinsActive ? 10 : 5;
         timeLeft += 10;
         gameMessage.textContent = 'You defeated the boss star! +5 coins, +10s';
+        playBossDefeat();
+        animateCoinToScore(rect.left + rect.width / 2, rect.top + rect.height / 2);
         updateScoreBar();
         checkAchievements();
         checkLevelComplete();
@@ -490,7 +500,7 @@ function setupLevel() {
     hiddenArea.appendChild(boss);
     bossStar = boss;
   }
-  // 50% chance to spawn a bonus coin
+  // Bonus coin
   if (Math.random() < 0.5) {
     const bonus = document.createElement('div');
     bonus.className = 'bonus';
@@ -499,16 +509,19 @@ function setupLevel() {
     bonus.style.left = pos.left;
     bonus.style.top = pos.top;
     bonus.addEventListener('click', () => {
+      const rect = bonus.getBoundingClientRect();
       hiddenArea.removeChild(bonus);
       coins += 2;
       gameMessage.textContent = 'Bonus coin collected! +2 coins';
+      playBonus();
+      animateCoinToScore(rect.left + rect.width / 2, rect.top + rect.height / 2);
       updateScoreBar();
       checkAchievements();
     });
     hiddenArea.appendChild(bonus);
-    bonusCoins.push(bonus);
+    bonusCoinsArr.push(bonus);
   }
-  // 40% chance to spawn a time extension item
+  // Time item
   if (Math.random() < 0.4) {
     const timeItem = document.createElement('div');
     timeItem.className = 'time-item';
@@ -517,16 +530,19 @@ function setupLevel() {
     timeItem.style.left = pos.left;
     timeItem.style.top = pos.top;
     timeItem.addEventListener('click', () => {
+      const rect = timeItem.getBoundingClientRect();
       hiddenArea.removeChild(timeItem);
       timeLeft += 10;
       totalTime += 10;
       gameMessage.textContent = 'Extra time! +10 seconds';
+      playTimeSound();
+      animateCoinToScore(rect.left + rect.width / 2, rect.top + rect.height / 2);
       updateProgressBar();
     });
     hiddenArea.appendChild(timeItem);
     timeItems.push(timeItem);
   }
-  // 40% chance to spawn a life item
+  // Life item
   if (Math.random() < 0.4) {
     const lifeItem = document.createElement('div');
     lifeItem.className = 'life-item';
@@ -535,41 +551,40 @@ function setupLevel() {
     lifeItem.style.left = pos.left;
     lifeItem.style.top = pos.top;
     lifeItem.addEventListener('click', () => {
+      const rect = lifeItem.getBoundingClientRect();
       hiddenArea.removeChild(lifeItem);
       lives++;
       gameMessage.textContent = 'Extra life gained!';
+      playLifeSound();
+      animateCoinToScore(rect.left + rect.width / 2, rect.top + rect.height / 2);
       updateScoreBar();
     });
     hiddenArea.appendChild(lifeItem);
     lifeItems.push(lifeItem);
   }
-  // Activate Freeze if purchased
-  if (freezeCount > 0) {
-    activateFreeze();
-  }
-  // Start timer and bomb movement
+  if (freezeCount > 0) activateFreeze();
   startTimer();
   startBombMovement();
 }
 
-// Handle clicking a regular object
 function handleObjectClick(obj) {
-  // Remove from DOM and list
+  const rect = obj.getBoundingClientRect();
   hiddenArea.removeChild(obj);
   stars = stars.filter(o => o !== obj);
-  // Add coins; double coins if power active
   coins += doubleCoinsActive ? 2 : 1;
   gameMessage.textContent = doubleCoinsActive ? 'Object collected! +2 coins' : 'Object collected! +1 coin';
+  playCollect();
+  animateCoinToScore(rect.left + rect.width / 2, rect.top + rect.height / 2);
   updateScoreBar();
   checkAchievements();
   checkLevelComplete();
 }
 
-// Handle bomb click
 function handleBombClick(bombEl) {
-  // Remove bomb
+  const rect = bombEl.getBoundingClientRect();
   hiddenArea.removeChild(bombEl);
   bombs = bombs.filter(b => b.element !== bombEl);
+  createExplosion(rect.left + rect.width / 2, rect.top + rect.height / 2);
   if (shieldActive) {
     shieldActive = false;
     gameMessage.textContent = 'Shield protected you from a bomb!';
@@ -577,6 +592,7 @@ function handleBombClick(bombEl) {
     lives--;
     timeLeft = Math.max(0, timeLeft - 5);
     gameMessage.textContent = 'Bomb hit! -1 life, -5s';
+    playBombSound();
     updateScoreBar();
     if (lives <= 0) {
       endGame('A bomb ended your adventure.');
@@ -586,24 +602,19 @@ function handleBombClick(bombEl) {
   updateProgressBar();
 }
 
-// Check if level is complete
 function checkLevelComplete() {
   if (stars.length === 0 && (!bossStar || bossClicks <= 0)) {
-    // Level finished
     clearInterval(timerInterval);
     clearInterval(bombInterval);
-    // Award bonus for leftover time
     const timeBonus = Math.floor(timeLeft / 5);
-    const reward = timeBonus + (doubleCoinsActive ? 2 : 1); // minimal reward for finishing level
+    const reward = timeBonus + (doubleCoinsActive ? 2 : 1);
     coins += reward;
     gameMessage.textContent = `Level complete! +${reward} coins`;
     if (level > highestLevel) highestLevel = level;
     updateScoreBar();
     checkAchievements();
-    // Reset per-level powers
     doubleCoinsActive = false;
     slowBombActive = false;
-    // Proceed to shop unless player has no lives
     if (lives > 0) {
       setTimeout(() => showShop(), 1500);
     } else {
@@ -612,41 +623,42 @@ function checkLevelComplete() {
   }
 }
 
-// Apply achievements if conditions met
 function checkAchievements() {
   for (const def of achievementDefs) {
     if (!achievements[def.id] && def.condition()) {
       achievements[def.id] = true;
       showAchievement(def.message);
-      return; // show one achievement at a time
+      return;
     }
   }
 }
 
-// End the game and return to start screen
 function endGame(message) {
   clearInterval(timerInterval);
   clearInterval(bombInterval);
   gameMessage.textContent = message;
-  // Delay before resetting
+  // Update best stats
+  if (highestLevel > bestLevel) {
+    bestLevel = highestLevel;
+    localStorage.setItem('bestLevel', bestLevel.toString());
+  }
+  if (coins > bestCoins) {
+    bestCoins = coins;
+    localStorage.setItem('bestCoins', bestCoins.toString());
+  }
   setTimeout(() => {
     initGame();
   }, 3000);
 }
 
-// Handler for when player leaves shop to continue to next level
 function proceedToNextLevel() {
   level++;
   if (lives <= 0) {
     endGame('Game over!');
     return;
   }
-  // Story at every third level
-  if ((level - 1) % 3 === 0) {
-    showStory();
-  } else {
-    setupLevel();
-  }
+  if ((level - 1) % 3 === 0) showStory();
+  else setupLevel();
 }
 
 // Event listeners
@@ -668,9 +680,7 @@ shopContinueBtn.addEventListener('click', () => {
 
 achievementContinueBtn.addEventListener('click', () => {
   hideOverlay();
-  // Continue the current flow: if level completed, wait for shop or next; otherwise resume game
   if (stars.length === 0 && (!bossStar || bossClicks <= 0)) {
-    // Already finished level; shop will show automatically after achievements
     setTimeout(() => showShop(), 500);
   } else if (lives <= 0) {
     endGame('Game over!');
@@ -689,13 +699,13 @@ hintBtn.addEventListener('click', () => {
   }
   coins -= 1;
   updateScoreBar();
-  // Highlight the first star temporarily
   const star = stars[0];
-  const originalColor = star.style.color;
+  const original = star.style.color;
   star.style.color = '#00e676';
-  setTimeout(() => {
-    star.style.color = originalColor;
-  }, 1000);
+  playCollect();
+  const rect = star.getBoundingClientRect();
+  animateCoinToScore(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  setTimeout(() => star.style.color = original, 1000);
 });
 
 revealBtn.addEventListener('click', () => {
@@ -710,16 +720,20 @@ revealBtn.addEventListener('click', () => {
   }
   coins -= 3;
   updateScoreBar();
-  // Reveal all stars
   const originalColors = stars.map(s => s.style.color);
   stars.forEach(s => { s.style.color = '#00e676'; });
+  playCollect();
+  stars.forEach(s => {
+    const rect = s.getBoundingClientRect();
+    animateCoinToScore(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  });
   setTimeout(() => {
-    stars.forEach((s, idx) => { s.style.color = originalColors[idx]; });
+    stars.forEach((s, i) => s.style.color = originalColors[i]);
   }, 2000);
 });
 
 pauseBtn.addEventListener('click', () => {
-  if (overlay.style.display === 'flex') return; // cannot pause during overlay
+  if (overlay.style.display === 'flex') return;
   paused = !paused;
   if (paused) {
     pauseBtn.textContent = 'Resume';
@@ -740,5 +754,5 @@ resetBtn.addEventListener('click', () => {
   initGame();
 });
 
-// Initialize the game on load
+// Initialize on load
 initGame();
