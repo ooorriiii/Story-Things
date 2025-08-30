@@ -22,7 +22,6 @@
             text-align: center;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        /* Card-like container */
         #game-container {
             margin-top: 2rem;
             width: 80%;
@@ -68,13 +67,11 @@
             cursor: pointer;
             animation: pulse 2s infinite;
         }
-        /* pulsating animation for stars */
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.2); }
             100% { transform: scale(1); }
         }
-        /* sparkles for collection effect */
         .spark {
             position: absolute;
             width: 8px;
@@ -88,7 +85,21 @@
             0% { transform: scale(1); opacity: 1; }
             100% { transform: scale(0.1); opacity: 0; }
         }
-        #level-info, #coin-display, #score-info, #timer {
+        /* Bomb styling */
+        .bomb {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background-color: #ff5252;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        #level-info, #coin-display, #score-info, #lives-info, #timer {
             margin-bottom: 0.3rem;
             font-weight: bold;
         }
@@ -110,8 +121,8 @@
             margin-top: 1rem;
             display: flex;
             gap: 1rem;
+            flex-wrap: wrap;
         }
-        /* game-message styling */
         #game-message {
             margin-top: 0.5rem;
             font-weight: bold;
@@ -132,12 +143,14 @@
         <div id="game-screen" style="display:none;">
             <div id="level-info"></div>
             <div id="coin-display"></div>
+            <div id="lives-info"></div>
             <div id="score-info"></div>
             <div id="timer"></div>
             <div id="progress-container"><div id="progress-bar"></div></div>
             <div id="hidden-object-area"></div>
             <div id="controls">
                 <button id="hint-button" class="secondary">Hint (Cost: 1 coin)</button>
+                <button id="reveal-button" class="secondary">Reveal All (Cost: 3 coins)</button>
                 <button id="reset-button" class="secondary">Reset Game</button>
             </div>
             <div id="game-message"></div>
