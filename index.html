@@ -5,18 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Crypto Hidden Object Game</title>
   <style>
-    /* Base styling for the page */
+    /* Base styling */
     body {
       margin: 0;
       padding: 0;
       font-family: Arial, sans-serif;
-      /* Soft gradient background for a modern look */
       background: linear-gradient(135deg, #c2e9fb 0%, #a1c4fd 100%);
       color: #333;
     }
-
     header {
-      background-color: #4a90e2;
+      background: #4a90e2;
       color: white;
       padding: 1rem 0;
       text-align: center;
@@ -25,8 +23,6 @@
       top: 0;
       z-index: 100;
     }
-
-    /* Card container to hold the game UI */
     #game-card {
       max-width: 700px;
       margin: 2rem auto;
@@ -36,22 +32,16 @@
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
       overflow: hidden;
     }
-
-    /* Sections for start and game screens */
     #start-screen, #game-screen {
       padding: 1rem 1.5rem;
     }
-
     #start-screen p {
       margin-top: 0;
     }
-
     #start-screen select, #start-screen button {
       margin-top: 0.5rem;
       margin-right: 0.5rem;
     }
-
-    /* Score bar at top of game screen */
     #score-bar {
       display: flex;
       flex-wrap: wrap;
@@ -60,12 +50,9 @@
       margin-bottom: 0.5rem;
       font-weight: bold;
     }
-
     #score-bar span {
       margin-right: 0.5rem;
     }
-
-    /* Progress bar container */
     #progress-container {
       width: 100%;
       background: #e0e0e0;
@@ -74,15 +61,12 @@
       overflow: hidden;
       margin-bottom: 0.5rem;
     }
-
     #progress-bar {
       height: 100%;
       width: 100%;
       background: #4caf50;
       transition: width 0.2s linear, background 0.2s linear;
     }
-
-    /* Hidden object area */
     #hidden-object-area {
       position: relative;
       width: 100%;
@@ -92,8 +76,6 @@
       overflow: hidden;
       margin-bottom: 1rem;
     }
-
-    /* Styles for objects */
     .object, .bonus, .time-item, .life-item, .boss-star, .bomb {
       position: absolute;
       display: flex;
@@ -138,7 +120,6 @@
       height: 32px;
       color: #f44336;
     }
-
     @keyframes pulse {
       0% { transform: scale(1); }
       50% { transform: scale(1.2); }
@@ -148,8 +129,6 @@
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-5px); }
     }
-
-    /* Control buttons */
     #controls {
       display: flex;
       flex-wrap: wrap;
@@ -164,20 +143,9 @@
       cursor: pointer;
       font-size: 0.9rem;
     }
-    #controls button.primary {
-      background: #4a90e2;
-      color: #fff;
-    }
-    #controls button.secondary {
-      background: #ccc;
-      color: #333;
-    }
-    #controls button.danger {
-      background: #f44336;
-      color: #fff;
-    }
-
-    /* Overlay styling for story, shop and achievements */
+    #controls button.primary { background: #4a90e2; color: #fff; }
+    #controls button.secondary { background: #ccc; color: #333; }
+    #controls button.danger { background: #f44336; color: #fff; }
     #overlay {
       position: fixed;
       top: 0;
@@ -191,7 +159,7 @@
       z-index: 200;
     }
     .overlay-panel {
-      background: #ffffff;
+      background: #fff;
       color: #333;
       border-radius: 10px;
       padding: 1rem;
@@ -204,9 +172,7 @@
       background: #2d2d2d;
       color: #f5f5f5;
     }
-    .overlay-panel h2 {
-      margin-top: 0;
-    }
+    .overlay-panel h2 { margin-top: 0; }
     #shop-items {
       display: flex;
       flex-direction: column;
@@ -223,39 +189,58 @@
       cursor: pointer;
       border: 1px solid #ddd;
     }
-    .shop-item:hover {
-      background: #e0f2ff;
-    }
+    .shop-item:hover { background: #e0f2ff; }
     .dark-mode .shop-item {
       background: #444;
       border: 1px solid #555;
     }
-    .dark-mode .shop-item:hover {
-      background: #555;
-    }
-
+    .dark-mode .shop-item:hover { background: #555; }
     #game-message {
       margin-top: 0.5rem;
       font-weight: bold;
       min-height: 1.2rem;
     }
-
-    /* Dark mode toggling */
     .dark-mode {
       background: linear-gradient(135deg, #2d2d2d 0%, #4a4a4a 100%);
       color: #f5f5f5;
     }
-    .dark-mode header {
-      background: #333;
+    .dark-mode header { background: #333; }
+    .dark-mode #game-card { background: rgba(50, 50, 50, 0.9); }
+    .dark-mode #hidden-object-area { background: linear-gradient(180deg, #4a4a4a 0%, #2d2d2d 100%); }
+    .dark-mode #progress-container { background: #555; }
+    /* Explosion effect */
+    .explosion {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 200, 0, 0.8) 0%, rgba(255, 0, 0, 0) 60%);
+      pointer-events: none;
+      animation: explode 0.6s forwards;
+      z-index: 300;
     }
-    .dark-mode #game-card {
-      background: rgba(50, 50, 50, 0.9);
+    @keyframes explode {
+      0% { transform: scale(0.5); opacity: 1; }
+      100% { transform: scale(2.5); opacity: 0; }
     }
-    .dark-mode #hidden-object-area {
-      background: linear-gradient(180deg, #4a4a4a 0%, #2d2d2d 100%);
+    /* Coin fly animation */
+    .coin-fly {
+      position: absolute;
+      font-size: 24px;
+      pointer-events: none;
+      z-index: 300;
+      transition: transform 0.7s linear, opacity 0.7s linear;
     }
-    .dark-mode #progress-container {
-      background: #555;
+    /* Particle effect */
+    .particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.8;
+      z-index: 100;
+      transition: transform 4s linear, opacity 4s linear;
     }
   </style>
 </head>
@@ -264,7 +249,7 @@
     <h1>Crypto Hidden Object Game (Demo)</h1>
   </header>
   <div id="game-card">
-    <!-- Start screen: choose difficulty and theme -->
+    <!-- Start Screen -->
     <div id="start-screen">
       <p>
         Welcome to this hidden object demo game. Choose a difficulty level and theme, then start. You begin with a demo balance of 5 coins.
@@ -287,8 +272,9 @@
       <button id="connect-wallet" class="secondary">Connect Wallet (Demo)</button>
       <button id="start-game" class="primary">Start Game</button>
       <div id="balance-display"></div>
+      <div id="best-stats"></div>
     </div>
-    <!-- Game screen: score bar, progress, game area, controls -->
+    <!-- Game Screen -->
     <div id="game-screen" style="display: none;">
       <div id="score-bar">
         <span id="level-info">Level: 1</span>
