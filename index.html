@@ -85,7 +85,6 @@
             0% { transform: scale(1); opacity: 1; }
             100% { transform: scale(0.1); opacity: 0; }
         }
-        /* Bomb styling */
         .bomb {
             position: absolute;
             width: 32px;
@@ -99,7 +98,25 @@
             font-size: 20px;
             cursor: pointer;
         }
-        #level-info, #coin-display, #score-info, #lives-info, #timer {
+        .bonus {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background-color: #ffc107;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            animation: bounce 1.5s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        #level-info, #coin-display, #lives-info, #score-info, #timer {
             margin-bottom: 0.3rem;
             font-weight: bold;
         }
@@ -127,6 +144,12 @@
             margin-top: 0.5rem;
             font-weight: bold;
         }
+        /* Difficulty select styling */
+        #difficulty-select {
+            margin-top: 0.5rem;
+            padding: 0.4rem;
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -135,7 +158,14 @@
     </header>
     <div id="game-container">
         <div id="start-screen">
-            <p>Welcome to this hidden object demo game. You start with a demo balance of 5 coins. Each level you will earn more coins.</p>
+            <p>Welcome to this hidden object demo game. Choose a difficulty level, then start. You start with a demo balance of 5 coins.</p>
+            <label for="difficulty-select">Difficulty:</label>
+            <select id="difficulty-select">
+                <option value="easy">Easy</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Hard</option>
+            </select>
+            <br/>
             <button id="connect-wallet" class="secondary">Connect Wallet (Demo)</button>
             <button id="start-game" class="primary">Start Game</button>
             <div id="balance"></div>
