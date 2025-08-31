@@ -1,39 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Crypto Hidden Object Game</title>
   <link rel="icon" href="data:,">
   <style>
-    :root{--bg1:#c2e9fb;--bg2:#a1c4fd;--card:#fff;--text:#333;--primary:#4a90e2;--danger:#f44336}
-    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,var(--bg1),var(--bg2));color:var(--text)}
-    header{background:var(--primary);color:#fff;text-align:center;padding:1rem;box-shadow:0 2px 6px rgba(0,0,0,.1)}
-    #game-card{max-width:800px;margin:2rem auto;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,.12);overflow:hidden}
-    #start-screen,#game-screen{padding:1rem 1.25rem}
-    #hidden-object-area{position:relative;width:100%;height:360px;border-radius:10px;background:linear-gradient(180deg,#83a4d4 0%,#b6fbff 100%);overflow:hidden;margin:.75rem 0}
-    .object,.bomb,.bonus,.time-item,.life-item,.boss-star{position:absolute;cursor:pointer;font-size:28px;user-select:none}
-    .object{color:#ffd54f;filter:drop-shadow(0 0 5px #ffd54f);animation:pulse 2s infinite}
-    .bomb{animation:shake .6s infinite}
-    .bonus{filter:drop-shadow(0 0 6px #ffc107);animation:bounce 1.4s infinite}
-    .time-item{color:#03a9f4;animation:bounce 1.6s infinite}
-    .life-item{color:#e91e63;animation:bounce 1.7s infinite}
-    .boss-star{color:#ffd700;font-size:40px;animation:pulse 1.1s infinite}
-    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.18)}100%{transform:scale(1)}}
-    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-    @keyframes shake{0%,100%{transform:translate(0) rotate(0)}25%{transform:translate(1px,-1px) rotate(-2deg)}50%{transform:translate(-1px,1px) rotate(2deg)}75%{transform:translate(1px,1px) rotate(-1deg)}}
-    .spark{position:absolute;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle,#fff 0,#ffd54f 55%,transparent 70%);opacity:.9;animation:spark .6s forwards}
-    @keyframes spark{0%{transform:scale(1);opacity:1}100%{transform:scale(.1);opacity:0}}
-    #progress{width:100%;height:12px;background:#e0e0e0;border-radius:7px;overflow:hidden}
-    #bar{height:100%;width:100%;background:#4caf50;transition:width .25s linear,background .25s linear}
-    #controls{display:flex;flex-wrap:wrap;gap:.5rem;margin:.25rem 0}
-    #controls button{flex:1 1 120px;padding:.55rem;border:none;border-radius:6px;background:#ddd;font-weight:600;cursor:pointer}
-    #controls .primary{background:var(--primary);color:#fff}
-    #controls .danger{background:var(--danger);color:#fff}
-    .dark-mode{--bg1:#111827;--bg2:#1f2937;--card:#1f2937;--text:#f5f5f5}
-    .dark-mode #game-card{background:rgba(31,41,55,.95);color:#f5f5f5}
-    #overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
-    .panel{width:min(92%,420px);background:var(--card);color:var(--text);border-radius:12px;padding:1rem 1.25rem;box-shadow:0 6px 18px rgba(0,0,0,.35);text-align:center}
+    body { margin:0; font-family:Arial; background:linear-gradient(135deg,#c2e9fb,#a1c4fd);}
+    header { background:#4a90e2; color:#fff; text-align:center; padding:1rem;}
+    #game-card { max-width:800px; margin:2rem auto; background:#fff; border-radius:12px; padding:1rem;}
+    #hidden-object-area { position:relative; height:360px; background:linear-gradient(180deg,#83a4d4,#b6fbff); border-radius:10px; margin:1rem 0;}
+    .object,.bomb { position:absolute; font-size:26px; cursor:pointer;}
+    #controls button{ margin:0.25rem; padding:0.5rem 1rem;}
   </style>
 </head>
 <body>
@@ -41,13 +19,10 @@
   <div id="game-card">
     <div id="start-screen">
       <p>Choose difficulty & theme, connect your wallet (optional), then start.</p>
-      <label>Difficulty: </label>
+      <label>Difficulty:</label>
       <select id="difficulty-select"><option>Easy</option><option selected>Normal</option><option>Hard</option></select>
-      <label style="margin-left:.5rem">Theme: </label>
-      <select id="theme-select"><option value="default" selected>Classic</option><option value="dream">Dream</option><option value="underwater">Underwater</option></select>
-      <br>
-      <button id="connect-wallet" class="primary">Connect Wallet</button>
-      <button id="start-game" class="primary">Start Game</button>
+      <button id="connect-wallet">Connect Wallet</button>
+      <button id="start-game">Start Game</button>
       <div id="wallet-address"></div>
       <div id="balance-display"></div>
       <div id="best-stats"></div>
@@ -55,31 +30,23 @@
 
     <div id="game-screen" style="display:none">
       <div id="score-bar">
-        <strong id="level-info">Level: 1</strong> ·
-        <strong id="coins-display">Coins: 5</strong> ·
-        <strong id="lives-info">Lives: 3</strong> ·
-        <strong id="highest-info">Highest: 0</strong>
+        <span id="level-info">Level: 1</span> |
+        <span id="coins-display">Coins: 5</span> |
+        <span id="lives-info">Lives: 3</span>
       </div>
-      <div id="progress"><div id="bar"></div></div>
+      <div id="progress-container"><div id="progress-bar" style="height:12px;background:#4caf50;width:100%"></div></div>
       <div id="hidden-object-area"></div>
       <div id="controls">
-        <button id="hint-button">Hint (1)</button>
-        <button id="reveal-button">Reveal (3)</button>
-        <button id="pause-button">Pause</button>
-        <button id="darkmode-button">Dark Mode</button>
-        <button id="reset-button" class="danger">Reset</button>
+        <button id="hint-button">Hint</button>
+        <button id="reset-button">Reset</button>
       </div>
       <div id="game-message"></div>
     </div>
   </div>
 
-  <!-- overlay (Achievements / Shop / Story – skeleton) -->
-  <div id="overlay"><div class="panel"><h2 id="overlay-title">Info</h2><p id="overlay-text"></p><button id="overlay-close" class="primary">Close</button></div></div>
-
-  <!-- libs & scripts -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-  <script src="wallet_exodus_integration.js" type="module"></script>
-  <script src="script.js" type="module"></script>
+  <script src="wallet_exodus_integration.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
