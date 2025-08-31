@@ -1,66 +1,46 @@
-/* Wallet integration for using native Ethereum (ETH) as the in‑game currency.
-   Requires ethers.js and MetaMask. No ERC‑20 token is used; instead, ETH is sent directly.
-   Replace GAME_ADDRESS with the address that will receive payments for hints, items, etc.
-*/
+/* Exodus/WalletConnect integration for ETH */
+const GAME_ADDRESS = '0x8342904bdc6b023C7dC0213556b994428aa17fb9';
+let provider, signer, userAccount;
 
-const GAME_ADDRESS = '0x8342904bdc6b023C7dC0213556b994428aa17fb9'; // Address that will receive ETH payments
-
-let provider;
-let signer;
-let userAccount;
-
-async function connectCryptoWallet() {
-  if (!window.ethereum) {
-    alert('MetaMask not detected. Please install MetaMask and try again.');
-    return;
-  }
-  try {
-    // Request account access
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-    provider = new ethers.providers.Web3Provider(window.ethereum);
+async function connectCryptoWallet(){
+  // 1) Try injected provider (MetaMask/Exodus extension)
+  if (window.ethereum) {
+    provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+    await provider.send('eth_requestAccounts', []);
     signer = provider.getSigner();
     userAccount = await signer.getAddress();
-    // Display abbreviated address
-    const walletEl = document.getElementById('wallet-address');
-    if (walletEl) walletEl.textContent = `Wallet: ${userAccount.substring(0,6)}...${userAccount.substring(userAccount.length-4)}`;
-    await updateEthBalance();
-  } catch (err) {
-    console.error('Wallet connection failed:', err);
+    const balWei = await provider.getBalance(userAccount);
+    const balanceEth = ethers.utils.formatEther(balWei);
+    return { address: userAccount, balanceEth };
   }
-}
 
-async function updateEthBalance() {
-  if (!provider || !userAccount) return;
-  try {
-    const balanceWei = await provider.getBalance(userAccount);
-    const balanceEth = ethers.utils.formatEther(balanceWei);
-    const balEl = document.getElementById('token-balance');
-    if (balEl) balEl.textContent = `ETH Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`;
-  } catch (err) {
-    console.error('Failed to fetch ETH balance:', err);
-  }
-}
-
-// Send ETH to the game address. Amount is in Ether (not Wei). Will open MetaMask confirmation.
-async function spendEth(amountEth) {
-  if (!signer || !userAccount) {
-    alert('Please connect your wallet first.');
-    return;
-  }
-  try {
-    const tx = await signer.sendTransaction({
-      to: GAME_ADDRESS,
-      value: ethers.utils.parseEther(amountEth.toString())
+  // 2) Fallback: WalletConnect (for Exodus mobile/desktop)
+  if (window.WalletConnectProvider && window.WalletConnectProvider.default){
+    const wc = new window.WalletConnectProvider.default({
+      rpc: { 1: 'https://cloudflare-eth.com' }, // Public RPC; replace with Infura/Alchemy for production
+      qrcode: true
     });
-    console.log('Transaction sent:', tx.hash);
-    await tx.wait();
-    console.log('Transaction confirmed');
-    await updateEthBalance();
-  } catch (err) {
-    console.error('Failed to send ETH:', err);
+    await wc.enable();
+    provider = new ethers.providers.Web3Provider(wc, 'any');
+    signer = provider.getSigner();
+    userAccount = await signer.getAddress();
+    const balWei = await provider.getBalance(userAccount);
+    const balanceEth = ethers.utils.formatEther(balWei);
+    return { address: userAccount, balanceEth };
   }
+
+  throw new Error('No wallet provider found. Please install MetaMask/Exodus extension or use WalletConnect.');
 }
 
-// Example usage: attach these functions to your game controls
-// connectWalletButton.addEventListener('click', connectCryptoWallet);
-// hintButton.addEventListener('click', () => spendEth(0.001));
+// Optional: spend ETH (e.g., pay for hints)
+// amountEth is a string like '0.001'
+async function spendEth(amountEth){
+  if (!signer) throw new Error('Wallet not connected');
+  const tx = await signer.sendTransaction({
+    to: GAME_ADDRESS,
+    value: ethers.utils.parseEther(amountEth)
+  });
+  // Wait for confirmation (optional)
+  await tx.wait();
+  return tx.hash;
+}
