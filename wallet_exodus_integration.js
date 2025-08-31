@@ -1,83 +1,47 @@
-/*
- * Wallet integration with fallback to WalletConnect for Exodus (desktop/mobile) and other wallets
- * Uses ethers.js and @walletconnect/web3-provider. The code first tries to use window.ethereum
- * (MetaMask/Brave/Exodus extension). If unavailable, it falls back to WalletConnect which presents
- * a QR code for connecting mobile wallets (e.g., Exodus mobile app).
- * Replace RPC_URL with a valid Ethereum RPC endpoint (e.g. Infura or Ankr).
- */
+/* Wallet integration for using native Ethereum (ETH) as the in‑game currency.
+   Requires ethers.js and MetaMask. No ERC‑20 token is used; instead, ETH is sent directly.
+   Replace GAME_ADDRESS with the address that will receive payments for hints, items, etc.
+*/
 
-const GAME_ADDRESS = '0x8342904bdc6b023C7dC0213556b994428aa17fb9';
-const RPC_URL = 'https://rpc.ankr.com/eth'; // Replace with your preferred ETH RPC endpoint
+const GAME_ADDRESS = '0x8342904bdc6b023C7dC0213556b994428aa17fb9'; // Address that will receive ETH payments
 
 let provider;
 let signer;
 let userAccount;
 
 async function connectCryptoWallet() {
-  // If the browser has an injected provider (MetaMask, Brave, Exodus extension), use it
-  if (window.ethereum) {
-    try {
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      signer = provider.getSigner();
-      userAccount = await signer.getAddress();
-      updateWalletDisplay();
-      return;
-    } catch (err) {
-      console.error('Injected provider connection failed:', err);
-      // fallback to walletconnect
-    }
-  }
-  // Fallback: use WalletConnect for mobile/desktop wallets like Exodus
-  try {
-    const wcProvider = new WalletConnectProvider.default({
-      rpc: { 1: RPC_URL }
-    });
-    // Open QR modal and connect
-    await wcProvider.enable();
-    provider = new ethers.providers.Web3Provider(wcProvider);
-    signer = provider.getSigner();
-    const accounts = await provider.listAccounts();
-    if (accounts.length > 0) {
-      userAccount = accounts[0];
-      updateWalletDisplay();
-    }
-    // Listen for session updates or disconnects
-    wcProvider.on('disconnect', (code, reason) => {
-      console.log('WalletConnect disconnected:', code, reason);
-      userAccount = undefined;
-      updateWalletDisplay();
-    });
-  } catch (err) {
-    console.error('WalletConnect connection failed:', err);
-  }
-}
-
-function updateWalletDisplay() {
-  const addrEl = document.getElementById('wallet-address');
-  const balEl = document.getElementById('token-balance');
-  if (!userAccount) {
-    if (addrEl) addrEl.textContent = '';
-    if (balEl) balEl.textContent = '';
+  if (!window.ethereum) {
+    alert('MetaMask not detected. Please install MetaMask and try again.');
     return;
   }
-  // Short address
-  if (addrEl) addrEl.textContent = `Wallet: ${userAccount.substring(0,6)}...${userAccount.substring(userAccount.length-4)}`;
-  updateEthBalance();
+  try {
+    // Request account access
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    signer = provider.getSigner();
+    userAccount = await signer.getAddress();
+    // Display abbreviated address
+    const walletEl = document.getElementById('wallet-address');
+    if (walletEl) walletEl.textContent = `Wallet: ${userAccount.substring(0,6)}...${userAccount.substring(userAccount.length-4)}`;
+    await updateEthBalance();
+  } catch (err) {
+    console.error('Wallet connection failed:', err);
+  }
 }
 
 async function updateEthBalance() {
   if (!provider || !userAccount) return;
   try {
-    const balWei = await provider.getBalance(userAccount);
-    const balEth = ethers.utils.formatEther(balWei);
+    const balanceWei = await provider.getBalance(userAccount);
+    const balanceEth = ethers.utils.formatEther(balanceWei);
     const balEl = document.getElementById('token-balance');
-    if (balEl) balEl.textContent = `ETH Balance: ${parseFloat(balEth).toFixed(4)} ETH`;
+    if (balEl) balEl.textContent = `ETH Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`;
   } catch (err) {
-    console.error('Failed to get ETH balance:', err);
+    console.error('Failed to fetch ETH balance:', err);
   }
 }
 
+// Send ETH to the game address. Amount is in Ether (not Wei). Will open MetaMask confirmation.
 async function spendEth(amountEth) {
   if (!signer || !userAccount) {
     alert('Please connect your wallet first.');
@@ -88,14 +52,15 @@ async function spendEth(amountEth) {
       to: GAME_ADDRESS,
       value: ethers.utils.parseEther(amountEth.toString())
     });
-    console.log('ETH payment tx sent:', tx.hash);
+    console.log('Transaction sent:', tx.hash);
     await tx.wait();
-    console.log('ETH payment tx confirmed');
+    console.log('Transaction confirmed');
     await updateEthBalance();
   } catch (err) {
-    console.error('ETH payment failed:', err);
+    console.error('Failed to send ETH:', err);
   }
 }
 
-// Helper: attach this function to your Connect Wallet button
-// connectWalletBtn.addEventListener('click', connectCryptoWallet);
+// Example usage: attach these functions to your game controls
+// connectWalletButton.addEventListener('click', connectCryptoWallet);
+// hintButton.addEventListener('click', () => spendEth(0.001));
