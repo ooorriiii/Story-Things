@@ -61,11 +61,16 @@
       <label>&nbsp;Theme:</label>
       <select id="theme-select"><option value="default" selected>Classic</option><option value="dream">Dream</option></select>
       <br/>
+      <div class="card">
+    <h2>Connect Wallet (Injected / WalletConnect v2)</h2>
+    <div class="row">
       <button id="connect-wallet">Connect Wallet</button>
-      <button id="start-game">Start Game</button>
-      <div id="wallet-address"></div>
-      <div id="balance-display"></div>
-      <div id="best-stats"></div>
+    </div>
+    <div class="row">Your Address: <code id="wallet-address">–</code></div>
+    <div class="row">ETH Balance: <code id="wallet-balance">–</code></div>
+    <div class="row" id="log" style="color:#444"></div>
+  </div>
+
     </div>
 
     <!-- GAME SCREEN -->
