@@ -1,80 +1,107 @@
-// ====== VERSION TAG ======
-console.log('SCRIPT_VERSION','2025-08-31-final');
+/* ========== SAFE HEADER (2025-08-31-fix1) ========== */
+console.clear();
+console.log('SCRIPT_VERSION','2025-08-31-fix1');
 
-// ====== DOM ======
-const startScreen=document.getElementById('start-screen');
-const gameScreen=document.getElementById('game-screen');
-const hiddenArea=document.getElementById('hidden-object-area');
-const progressBar=document.getElementById('progress-bar');
-const levelInfo=document.getElementById('level-info');
-const coinsDisplay=document.getElementById('coins-display');
-const livesInfo=document.getElementById('lives-info');
-const highestInfo=document.getElementById('highest-info');
-const gameMessage=document.getElementById('game-message');
-const balanceDisplay=document.getElementById('balance-display');
-const bestStatsEl=document.getElementById('best-stats');
+/* DOM handles */
+const startScreen       = document.getElementById('start-screen');
+const gameScreen        = document.getElementById('game-screen');
+const hiddenArea        = document.getElementById('hidden-object-area');
+const progressBar       = document.getElementById('progress-bar');
+const levelInfo         = document.getElementById('level-info');
+const coinsDisplay      = document.getElementById('coins-display');
+const livesInfo         = document.getElementById('lives-info');
+const highestInfo       = document.getElementById('highest-info');
+const gameMessage       = document.getElementById('game-message');
+const balanceDisplay    = document.getElementById('balance-display');
+const bestStatsEl       = document.getElementById('best-stats');
 
-const connectWalletBtn=document.getElementById('connect-wallet');
-const startGameBtn=document.getElementById('start-game');
-const difficultySelect=document.getElementById('difficulty-select');
-const themeSelect=document.getElementById('theme-select');
-const hintBtn=document.getElementById('hint-button');
-const revealBtn=document.getElementById('reveal-button');
-const pauseBtn=document.getElementById('pause-button');
-const darkModeBtn=document.getElementById('darkmode-button');
-const resetBtn=document.getElementById('reset-button');
+/* Buttons & selects */
+const connectWalletBtn  = document.getElementById('connect-wallet');
+const startGameBtn      = document.getElementById('start-game');
+const difficultySelect  = document.getElementById('difficulty-select');
+const themeSelect       = document.getElementById('theme-select');
+const hintBtn           = document.getElementById('hint-button');
+const revealBtn         = document.getElementById('reveal-button');
+const pauseBtn          = document.getElementById('pause-button');
+const darkModeBtn       = document.getElementById('darkmode-button');
+const resetBtn          = document.getElementById('reset-button');
 
-const overlay=document.getElementById('overlay');
-const storyPanel=document.getElementById('story-panel');
-const storyTextEl=document.getElementById('story-text');
-const storyContinueBtn=document.getElementById('story-continue');
-const shopPanel=document.getElementById('shop-panel');
-const shopItemsEl=document.getElementById('shop-items');
-const shopContinueBtn=document.getElementById('shop-continue');
-const achievementPanel=document.getElementById('achievement-panel');
-const achievementTextEl=document.getElementById('achievement-text');
-const achievementContinueBtn=document.getElementById('achievement-continue');
+/* Overlay panels */
+const overlay           = document.getElementById('overlay');
+const storyPanel        = document.getElementById('story-panel');
+const storyTextEl       = document.getElementById('story-text');
+const storyContinueBtn  = document.getElementById('story-continue');
+const shopPanel         = document.getElementById('shop-panel');
+const shopItemsEl       = document.getElementById('shop-items');
+const shopContinueBtn   = document.getElementById('shop-continue');
+const achievementPanel  = document.getElementById('achievement-panel');
+const achievementTextEl = document.getElementById('achievement-text');
+const achievementContinueBtn = document.getElementById('achievement-continue');
 
-// ====== AUDIO ======
-const AudioContextClass=window.AudioContext||window.webkitAudioContext;
-const audioCtx=new AudioContextClass();
-function tone(f,d){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.type='sine';o.frequency.value=f;const t=audioCtx.currentTime;o.start(t);g.gain.setValueAtTime(.1,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.stop(t+d)}
-const SFX={collect:()=>tone(850,.15),bonus:()=>tone(1000,.2),time:()=>tone(600,.25),life:()=>tone(400,.25),bomb:()=>tone(150,.3),boss:()=>tone(350,.5),purchase:()=>tone(500,.2),achv:()=>tone(700,.4)};
-
-// ====== SETTINGS ======
-const difficultySettings={Easy:{time:60,stars:3,bombs:1},Normal:{time:50,stars:4,bombs:2},Hard:{time:40,stars:5,bombs:3}};
-const themes={
-  default:{object:'⭐',bonus:'💰',time:'⌛',life:'❤️',bomb:'💣',boss:'🌟',bg:'linear-gradient(180deg,#83a4d4 0%,#b6fbff 100%)'},
-  time:{object:'🕰️',bonus:'📜',time:'⏳',life:'🔮',bomb:'⌛',boss:'🕰️',bg:'linear-gradient(180deg,#ffd89b 0%,#19547b 100%)'},
-  underwater:{object:'🐚',bonus:'🦈',time:'🐠',life:'🐙',bomb:'💣',boss:'🐳',bg:'linear-gradient(180deg,#00c6fb 0%,#005bea 100%)'},
-  dream:{object:'🌙',bonus:'🌟',time:'💤',life:'🦋',bomb:'☁️',boss:'🌈',bg:'linear-gradient(180deg,#e0c3fc 0%,#8ec5fc 100%)'},
-  village:{object:'🏡',bonus:'🐔',time:'🌿',life:'🌾',bomb:'🚜',boss:'🌳',bg:'linear-gradient(180deg,#eaf2d7 0%,#d5ebba 100%)'}
+/* Audio (WebAudio safe) */
+const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContextClass();
+function tone(freq, dur) {
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.type = 'sine'; o.frequency.value = freq;
+  const t = audioCtx.currentTime;
+  o.start(t); g.gain.setValueAtTime(0.1, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.stop(t + dur);
+}
+const SFX = {
+  collect:   () => tone(850, 0.15),
+  bonus:     () => tone(1000, 0.20),
+  time:      () => tone(600, 0.25),
+  life:      () => tone(400, 0.25),
+  bomb:      () => tone(150, 0.30),
+  boss:      () => tone(350, 0.50),
+  purchase:  () => tone(500, 0.20),
+  achv:      () => tone(700, 0.40),
 };
 
-// ====== STATE ======
-let level,coins,lives,highestLevel,theme,difficulty;
-let stars=[],bombs=[],bonusCoins=[],timeItems=[],lifeItems=[]; let bossStar=null,bossClicks=0;
-let timeLeft,totalTime,timerInterval,bombInterval,paused=false;
-let shieldActive=false,freezeCount=0,doubleCoinsActive=false;
-(function initBest(){const bestLevel=parseInt(localStorage.getItem('bestLevel')||'0',10),bestCoins=parseInt(localStorage.getItem('bestCoins')||'0',10); bestStatsEl.textContent=`Best Level: ${bestLevel} | Best Coins: ${bestCoins}`;})();
+/* Difficulty & themes (הישנים שלך יכולים להישאר) */
+const difficultySettings = {
+  Easy:   { time: 60, stars: 3, bombs: 1 },
+  Normal: { time: 50, stars: 4, bombs: 2 },
+  Hard:   { time: 40, stars: 5, bombs: 3 },
+};
+const themes = {
+  default:    { object:'⭐', bonus:'💰', time:'⌛', life:'❤️', bomb:'💣', boss:'🌟',
+                bg:'linear-gradient(180deg,#83a4d4 0%,#b6fbff 100%)' },
+  time:       { object:'🕰️', bonus:'📜', time:'⏳', life:'🔮', bomb:'⌛', boss:'🕰️',
+                bg:'linear-gradient(180deg,#ffd89b 0%,#19547b 100%)' },
+  underwater: { object:'🐚', bonus:'🦈', time:'🐠', life:'🐙', bomb:'💣', boss:'🐳',
+                bg:'linear-gradient(180deg,#00c6fb 0%,#005bea 100%)' },
+  dream:      { object:'🌙', bonus:'🌟', time:'💤', life:'🦋', bomb:'☁️', boss:'🌈',
+                bg:'linear-gradient(180deg,#e0c3fc 0%,#8ec5fc 100%)' },
+  village:    { object:'🏡', bonus:'🐔', time:'🌿', life:'🌾', bomb:'🚜', boss:'🌳',
+                bg:'linear-gradient(180deg,#eaf2d7 0%,#d5ebba 100%)' },
+};
 
-// ====== HELPERS ======
-function updateScoreBar(){levelInfo.textContent=`Level: ${level}`; coinsDisplay.textContent=`Coins: ${coins}`; livesInfo.textContent=`Lives: ${lives}`; highestInfo.textContent=`Highest: ${highestLevel}`; balanceDisplay.textContent=`Balance: ${coins} coins`;}
-function updateProgress(){const r=timeLeft/totalTime; progressBar.style.width=Math.max(0,r*100)+'%'; progressBar.style.background=r>0.5?'#4caf50':(r>0.25?'#ff9800':'#f44336');}
-function rndPos(){return {left:(Math.random()*90+5)+'%', top:(Math.random()*90+5)+'%'};}
-function spark(x,y){for(let i=0;i<8;i++){const s=document.createElement('div'); s.className='spark'; const a=Math.random()*Math.PI*2, d=Math.random()*30+10; s.style.left=`${x+Math.cos(a)*d-4}px`; s.style.top=`${y+Math.sin(a)*d-4}px`; hiddenArea.appendChild(s); setTimeout(()=>s.remove(),600)}}
+/* State בסיסי */
+let level, coins, lives, highestLevel, theme, difficulty;
+let stars = [], bombs = [], bonusCoins = [], timeItems = [], lifeItems = [];
+let bossStar = null, bossClicks = 0;
+let timeLeft, totalTime, timerInterval, bombInterval, paused = false;
 
-// ====== WALLET BUTTON ======
-connectWalletBtn.addEventListener('click', async()=>{
-  try{
-    if(typeof connectCryptoWallet!=='function'){ alert('Wallet module not loaded (wallet_exodus_integration.js)'); return; }
+/* חיבור ארנק – קריאה למודול */
+connectWalletBtn.addEventListener('click', async () => {
+  try {
+    if (typeof connectCryptoWallet !== 'function') {
+      alert('Wallet module not loaded (wallet_exodus_integration.js)');
+      return;
+    }
     const { address, balanceEth } = await connectCryptoWallet();
-    document.getElementById('wallet-address').textContent=`Address: ${address}`;
-    document.getElementById('balance-display').textContent=`ETH Balance: ${balanceEth}`;
-  }catch(e){ alert('Wallet error: '+(e?.message||e)); }
+    document.getElementById('wallet-address').textContent  = `Address: ${address}`;
+    document.getElementById('balance-display').textContent = `ETH Balance: ${balanceEth}`;
+  } catch (e) {
+    alert('Wallet error: ' + (e?.message || e));
+  }
 });
 
-// ====== GAME ======
 function setupLevel(){
   hiddenArea.innerHTML=''; gameMessage.textContent=''; stars=[]; bombs=[]; bonusCoins=[]; timeItems=[]; lifeItems=[];
   const diff=difficultySettings[difficulty]; const starCount=diff.stars+Math.floor((level-1)/2); const bombCount=diff.bombs+Math.floor(level/2);
