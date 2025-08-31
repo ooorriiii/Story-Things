@@ -6,10 +6,11 @@
   <title>Crypto Hidden Object Game</title>
   <link rel="icon" href="data:,">
   <style>
+    /* סגנון ועיצוב המשחק (שכפול התבנית הקודמת) */
     :root {
       --bg1: #c2e9fb;
       --bg2: #a1c4fd;
-      --card: #ffffff;
+      --card: #fff;
       --text: #333;
       --primary: #4a90e2;
       --danger: #f44336;
@@ -17,7 +18,7 @@
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
-      background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 100%);
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
       color: var(--text);
     }
     header { background: var(--primary); color: #fff; text-align: center; padding: 1rem; }
@@ -30,9 +31,10 @@
       background: linear-gradient(180deg, #83a4d4 0%, #b6fbff 100%);
       overflow: hidden; margin: .75rem 0 1rem; border: 1px solid #e0e0e0;
     }
-    .object, .bomb, .bonus, .life-item, .time-item, .boss-star {
+    .object,.bomb,.bonus,.life-item,.time-item,.boss-star {
       position: absolute; font-size: 28px; cursor: pointer; user-select: none;
     }
+    /* אנימציות ודקורציה לכוכבים, פצצות ופריטים */
     .object { color: #ffd54f; filter: drop-shadow(0 0 6px #ffd54f); animation: pulse 2s infinite; }
     .bomb   { color: #f44336; animation: shake .6s infinite; }
     .bonus  { color: #ffc107; animation: bounce 1.4s infinite; filter: drop-shadow(0 0 4px #ffc107); }
@@ -41,8 +43,10 @@
     .boss-star { color: #ffd700; font-size: 40px; animation: pulse 1.1s infinite; }
     @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.18)} 100%{transform:scale(1)} }
     @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    /* חלקיקים ברקע וניצוצות */
     .particle { position: absolute; width: 3px; height: 3px; border-radius: 50%;
-      background: rgba(255,255,255,.6); filter: blur(1px); animation: fall 4s linear forwards; }
+      background: rgba(255,255,255,.6); filter: blur(1px);
+      animation: fall 4s linear forwards; }
     @keyframes fall { 0%{ transform:translateY(-10px); opacity:.9 } 100%{ transform:translateY(380px); opacity:0 } }
     .spark { position: absolute; width: 8px; height: 8px; background: #ffd700; border-radius: 50%;
       opacity: .9; animation: spark .6s forwards; }
@@ -72,8 +76,7 @@
       <label>&nbsp;Theme:</label>
       <select id="theme-select">
         <option value="default" selected>Classic</option><option value="dream">Dream</option>
-      </select>
-      <br>
+      </select><br>
       <button id="connect-wallet">Connect Wallet</button>
       <button id="start-game">Start Game</button>
       <div id="wallet-address"></div>
@@ -102,12 +105,12 @@
     </div>
   </div>
 
-  <!-- ספריות -->
+  <!-- ספריות חיצוניות -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script src="https://unpkg.com/@walletconnect/ethereum-provider/dist/index.umd.min.js"></script>
-  <!-- מודול ארנק: מטפל ב‑MetaMask/Exodus Extension וב‑WalletConnect v2 -->
+  <!-- מודול הארנק -->
   <script src="wallet_wc_v2.js"></script>
-  <!-- קוד המשחק -->
+  <!-- לוגיקת המשחק -->
   <script src="script.js"></script>
 </body>
 </html>
