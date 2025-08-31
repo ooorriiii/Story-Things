@@ -131,15 +131,13 @@ pauseBtn.onclick=()=>{ paused=!paused; pauseBtn.textContent = paused ? 'Resume' 
 darkModeBtn.onclick=()=>{ document.body.classList.toggle('dark-mode'); };
 resetBtn.onclick=()=>{ endGame('Reset'); };
 
-// ===== WALLET =====
-connectWalletBtn.onclick = async ()=>{
-  try{
-    if(typeof window.connectCryptoWallet!=='function'){
-      alert('Wallet module not loaded (wallet_exodus_integration.js)');
-      return;
-    }
+// כפתור החיבור
+connectWalletBtn.addEventListener('click', async () => {
+  try {
     const { address, balanceEth } = await window.connectCryptoWallet();
     document.getElementById('wallet-address').textContent  = `Your Address: ${address}`;
     document.getElementById('balance-display').textContent = `ETH Balance: ${balanceEth}`;
-  }catch(e){ alert('Wallet error: ' + (e?.message||e)); }
-};
+  } catch (e) {
+    alert('Wallet error: ' + (e?.message || e));
+  }
+});
