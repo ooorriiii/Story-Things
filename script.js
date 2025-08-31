@@ -1,5 +1,6 @@
 console.clear();
 console.log('SCRIPT_VERSION','2025-08-31-full');
+import { connectCryptoWallet, spendEth, GAME_ADDRESS } from './wallet_exodus_integration.js';
 
 
 /* ==== DOM ==== */
