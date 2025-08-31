@@ -1,9 +1,9 @@
 /* wallet_wc_v2.js – WalletConnect V2 + MetaMask/Exodus Extension.
-   החלף את 'YOUR_WALLETCONNECT_V2_PROJECT_ID' במזהה הפרויקט שלך.
+   החלף את YOUR_WALLETCONNECT_V2_PROJECT_ID במזהה הפרויקט שקיבלת מ-WalletConnect Cloud.
 */
 const GAME_ADDRESS   = '0x8342904bdc6b023C7dC0213556b994428aa17fb9';
 const WC_PROJECT_ID  = 'b80a9c61167c5f3d1f625bf26ede6c6b';
-const CHAINS         = [1]; // Mainnet. לשימוש ב‑Sepolia: [11155111]
+const CHAINS         = [1]; // Mainnet
 
 let provider, signer, userAddress;
 
@@ -40,6 +40,7 @@ async function connectWalletConnectV2() {
   });
   wc.on('display_uri', (uri) => {
     if (isMobile()) {
+      // deep-link ל-Exodus במובייל
       window.location.href = `exodus://wc?uri=${encodeURIComponent(uri)}`;
     }
   });
@@ -52,6 +53,7 @@ async function connectWalletConnectV2() {
 }
 
 window.connectCryptoWallet = async function connectCryptoWallet() {
+  // injected קודם (MetaMask/Exodus Extension)
   const inj = await connectInjected();
   if (inj) {
     provider = inj.provider;
@@ -59,6 +61,7 @@ window.connectCryptoWallet = async function connectCryptoWallet() {
     userAddress = inj.address;
     return inj;
   }
+  // אחרת WalletConnect v2
   const wc = await connectWalletConnectV2();
   provider = wc.provider;
   signer   = wc.signer;
