@@ -1,186 +1,107 @@
-console.clear();
-console.log("SCRIPT_VERSION","2025-08-31-full");
+/* wallet_wc_v2.js – WalletConnect V2 + MetaMask/Exodus Extension
+ *
+ * This version includes a helper to dynamically load the WalletConnect V2 UMD
+ * bundle if it is not already present on the page.  Without this, calling
+ * connectCryptoWallet() would throw "WalletConnect v2 UMD not loaded" when
+ * the provider script isn't included manually.
+ */
 
-/* DOM elements */
-const startScreen  = document.getElementById("start-screen");
-const gameScreen   = document.getElementById("game-screen");
-const hiddenArea   = document.getElementById("hidden-object-area");
-const progressBar  = document.getElementById("progress-bar");
-const levelInfo    = document.getElementById("level-info");
-const coinsDisplay = document.getElementById("coins-display");
-const livesInfo    = document.getElementById("lives-info");
-const highestInfo  = document.getElementById("highest-info");
-const gameMessage  = document.getElementById("game-message");
-const connectBtn   = document.getElementById("connect-wallet");
-const startBtn     = document.getElementById("start-game");
-const hintBtn      = document.getElementById("hint-button");
-const revealBtn    = document.getElementById("reveal-button");
-const pauseBtn     = document.getElementById("pause-button");
-const darkBtn      = document.getElementById("darkmode-button");
-const resetBtn     = document.getElementById("reset-button");
+const GAME_ADDRESS = '0x8342904bdc6b023C7dC0213556b994428aa17fb9';
+const WC_PROJECT_ID = 'b80a9c61167c5f3d1f625bf26ede6c6b';
+const CHAINS = [1];
 
-/* Game state */
-let level=1, coins=5, lives=3;
-let highestLevel=parseInt(localStorage.getItem('bestLevel')||'0',10);
-let stars=[], bombs=[];
-let timeLeft=50, totalTime=50, timerInterval, paused=false;
+let provider;
+let signer;
+let userAddress;
 
-/* UI updates */
-function updateScore() {
-  levelInfo.textContent  = `Level: ${level}`;
-  coinsDisplay.textContent= `Coins: ${coins}`;
-  livesInfo.textContent  = `Lives: ${lives}`;
-  highestInfo.textContent= `Highest: ${highestLevel}`;
+function checksum(addr) {
+  return ethers.utils.getAddress(addr);
 }
-function updateProgress() {
-  const r = timeLeft/totalTime;
-  progressBar.style.width = Math.max(0,r*100)+'%';
-  progressBar.style.background= r>0.5 ? '#4caf50' : (r>0.25 ? '#ff9800' : '#f44336');
+
+function isMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
-function rndPos() {
-  return { left:(Math.random()*90+5)+'%', top:(Math.random()*85+5)+'%' };
-}
-function spark(x,y) {
-  for(let i=0;i<8;i++){
-    const s=document.createElement('div');
-    s.className='spark';
-    const a=Math.random()*Math.PI*2, d=Math.random()*30+10;
-    s.style.left=`${x+Math.cos(a)*d-4}px`;
-    s.style.top =`${y+Math.sin(a)*d-4}px`;
-    hiddenArea.appendChild(s);
-    setTimeout(()=>s.remove(),600);
+
+// Dynamically load the WalletConnect Ethereum provider if it's not already
+// available on window.  Returns a promise that resolves when loaded.
+async function ensureWalletConnectLoaded() {
+  if (window.WalletConnectEthereumProvider) {
+    return;
   }
-}
-function startParticles() {
-  setInterval(()=>{
-    if(document.hidden) return;
-    const p=document.createElement('div');
-    p.className='particle';
-    p.style.left=Math.random()*100+'%';
-    p.style.top='-6px';
-    hiddenArea.appendChild(p);
-    setTimeout(()=>p.remove(),4000);
-  },250);
+  await new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    // Use a versioned CDN path for deterministic behaviour.  If you update
+    // @walletconnect/ethereum-provider version, update the URL accordingly.
+    script.src =
+      'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.21.8/dist/index.umd.min.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load WalletConnect UMD'));
+    document.head.appendChild(script);
+  });
 }
 
-/* Level setup */
-function setupLevel() {
-  hiddenArea.innerHTML=''; stars=[]; bombs=[]; gameMessage.textContent='';
-  timeLeft=totalTime; updateProgress(); updateScore();
-  // stars
-  for(let i=0;i<5;i++){
-    const o=document.createElement('div');
-    o.className='object';
-    o.textContent='⭐';
-    const p=rndPos();
-    o.style.left=p.left;
-    o.style.top=p.top;
-    o.onclick=()=> {
-      const r=o.getBoundingClientRect();
-      o.remove();
-      stars=stars.filter(s=>s!==o);
-      coins++;
-      updateScore();
-      spark(r.left+r.width/2, r.top+r.height/2);
-      if(stars.length===0) nextLevel();
-    };
-    hiddenArea.appendChild(o);
-    stars.push(o);
-  }
-  // bombs
-  for(let i=0;i<2;i++){
-    const b=document.createElement('div');
-    b.className='bomb';
-    b.textContent='💣';
-    const p=rndPos();
-    b.style.left=p.left;
-    b.style.top=p.top;
-    b.onclick=()=> {
-      const r=b.getBoundingClientRect();
-      b.remove();
-      bombs=bombs.filter(x=>x!==b);
-      lives--;
-      updateScore();
-      spark(r.left+r.width/2, r.top+r.height/2);
-      if(lives<=0) endGame('Game Over');
-    };
-    hiddenArea.appendChild(b);
-    bombs.push(b);
-  }
-  startParticles();
-  startTimer();
+async function connectInjected() {
+  if (!window.ethereum) return null;
+  const web3 = new ethers.providers.Web3Provider(window.ethereum, 'any');
+  await web3.send('eth_requestAccounts', []);
+  const s = web3.getSigner();
+  const addr = checksum(await s.getAddress());
+  const bal = ethers.utils.formatEther(await web3.getBalance(addr));
+  return { provider: web3, signer: s, address: addr, balanceEth: bal };
 }
-function startTimer() {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(()=>{
-    if(!paused) {
-      timeLeft--;
-      updateProgress();
-      if(timeLeft<=0) endGame('Time Up!');
+
+async function connectWalletConnectV2() {
+  // Ensure the provider library is loaded before using it.
+  await ensureWalletConnectLoaded();
+  const WCEProvider = window.WalletConnectEthereumProvider;
+  if (!WCEProvider) throw new Error('WalletConnect provider script failed to load');
+  const wc = await WCEProvider.init({
+    projectId: WC_PROJECT_ID,
+    chains: CHAINS,
+    showQrModal: !isMobile(),
+    metadata: {
+      name: 'Crypto Hidden Object Game',
+      description: 'Hidden-objects game with ETH wallet support',
+      url: location.origin,
+      icons: [],
+    },
+  });
+  wc.on('display_uri', (uri) => {
+    if (isMobile()) {
+      window.location.href = `exodus://wc?uri=${encodeURIComponent(uri)}`;
     }
-  },1000);
-}
-function nextLevel() {
-  clearInterval(timerInterval);
-  level++;
-  coins+=2;
-  highestLevel=Math.max(highestLevel, level);
-  localStorage.setItem('bestLevel', String(highestLevel));
-  updateScore();
-  setupLevel();
-}
-function endGame(msg) {
-  clearInterval(timerInterval);
-  gameMessage.textContent = msg;
-  startScreen.style.display='block';
-  gameScreen.style.display='none';
+  });
+  await wc.connect();
+  const web3 = new ethers.providers.Web3Provider(wc, 'any');
+  const s = web3.getSigner();
+  const addr = checksum(await s.getAddress());
+  const bal = ethers.utils.formatEther(await web3.getBalance(addr));
+  return { provider: web3, signer: s, address: addr, balanceEth: bal };
 }
 
-/* Button actions */
-startBtn.onclick = () => {
-  level=1; coins=5; lives=3;
-  startScreen.style.display='none';
-  gameScreen.style.display='block';
-  updateScore();
-  setupLevel();
-};
-hintBtn.onclick = () => {
-  if(coins>=1 && stars.length>0){
-    coins--;
-    const s=stars[0];
-    const orig=s.style.color;
-    s.style.color='lime';
-    setTimeout(()=>s.style.color=orig, 800);
-    updateScore();
+window.connectCryptoWallet = async function connectCryptoWallet() {
+  // Try injected provider first (MetaMask/Exodus extension)
+  const inj = await connectInjected();
+  if (inj) {
+    provider = inj.provider;
+    signer = inj.signer;
+    userAddress = inj.address;
+    return inj;
   }
-};
-revealBtn.onclick = () => {
-  if(coins>=3 && stars.length>0){
-    coins-=3;
-    const orig=stars.map(s=>s.style.color);
-    stars.forEach(s=>s.style.color='lime');
-    setTimeout(()=>stars.forEach((s,i)=>s.style.color=orig[i]),1500);
-    updateScore();
-  }
-};
-pauseBtn.onclick = () => {
-  paused = !paused;
-  pauseBtn.textContent = paused ? 'Resume' : 'Pause';
-};
-darkBtn.onclick = () => {
-  document.body.classList.toggle('dark-mode');
-};
-resetBtn.onclick = () => {
-  endGame('Reset');
+  // Fall back to WalletConnect V2
+  const wc = await connectWalletConnectV2();
+  provider = wc.provider;
+  signer = wc.signer;
+  userAddress = wc.address;
+  return wc;
 };
 
-/* Wallet connection */
-connectBtn.onclick = async () => {
-  try {
-    const { address, balanceEth } = await window.connectCryptoWallet();
-    document.getElementById('wallet-address').textContent  = `Your Address: ${address}`;
-    document.getElementById('balance-display').textContent = `ETH Balance: ${balanceEth}`;
-  } catch (e) {
-    alert('Wallet error: ' + (e?.message || e));
-  }
+window.spendEth = async function spendEth(amountEth) {
+  if (!signer) throw new Error('Wallet not connected');
+  const tx = await signer.sendTransaction({
+    to: GAME_ADDRESS,
+    value: ethers.utils.parseEther(String(amountEth)),
+  });
+  await tx.wait();
+  return tx.hash;
 };
