@@ -2,7 +2,9 @@
  * Requires ethers.js and MetaMask or another injected provider. No ERC-20 token is used;
  * ETH is sent directly to the address defined as GAME_ADDRESS.
  */
-const GAME_ADDRESS = '0x8342904bdc6b023c7dC0213556b994428aa17fb9'; // Replace with game payment address
+if (!window.GAME_ADDRESS) {
+  window.GAME_ADDRESS = '0x8342904bdcb0b023c7dc0213556b994428aa17fb9';
+}
 
 let provider;
 let signer;
