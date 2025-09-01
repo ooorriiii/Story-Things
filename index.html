@@ -55,12 +55,15 @@
         <!-- Game canvas and other elements would go here -->
     </div>
     <!-- Load ethers.js from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <!-- Load our wallet integration scripts -->
-    <script src="wallet_eth_integration_updated.js"></script>
-    <script src="wallet_wc_v2.js"></script>
-    <!-- Load the main game logic -->
-    <script src="script.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<!-- Load WalletConnect provider UMD (so connectWalletConnectV2 won’t fail) -->
+<script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.21.8/dist/index.umd.min.js"></script>
+<!-- Load your wallet integration scripts -->
+<script src="wallet_eth_integration_updated.js"></script>
+<script src="wallet_wc_v2.js"></script>
+<!-- Load the main game logic -->
+<script src="script.js"></script>
+
     <script>
         // Hook up buttons to wallet integration
         document.getElementById('connect-wallet-btn').addEventListener('click', async () => {
