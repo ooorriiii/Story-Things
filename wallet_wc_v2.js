@@ -6,13 +6,17 @@
  * the provider script isn't included manually.
  */
 
-// const GAME_ADDRESS = '0x8342904bd0cb823c7dc0213556b904428aa17fb9';
-if (!window.WC_PROJECT_ID) { window.WC_PROJECT_ID = 'b80a9c61167c5f3df1c625bf26ede6c6b'; }
-if (!window.CHAINS) { window.CHAINS = [1]; }
+if (!window.WC_PROJECT_ID) {
+  window.WC_PROJECT_ID = 'b80a9c61167c5f3d1f625bf26ede6c6b';
+}
+if (!window.CHAINS) {
+  window.CHAINS = [1];
+}
 
-var provider;
-var signer;
-var userAddress;
+// walletConnect-specific variables to avoid collision
+let wcProvider;
+let wcSigner;
+let wcUserAddress;
 
 function checksum(addr) {
   return ethers.utils.getAddress(addr);
@@ -30,7 +34,8 @@ async function ensureWalletConnectLoaded() {
   }
   await new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.21.8/dist/index.umd.min.js';
+    script.src =
+      'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.21.8/dist/index.umd.min.js';
     script.onload = () => resolve();
     script.onerror = () => reject(new Error('Failed to load WalletConnect UMD'));
     document.head.appendChild(script);
@@ -41,10 +46,10 @@ async function connectInjected() {
   if (!window.ethereum) return null;
   const web3 = new ethers.providers.Web3Provider(window.ethereum, 'any');
   await web3.send('eth_requestAccounts', []);
-  const s = web3.getSigner();
-  const addr = checksum(await s.getAddress());
+  const signer = web3.getSigner();
+  const addr = checksum(await signer.getAddress());
   const bal = ethers.utils.formatEther(await web3.getBalance(addr));
-  return { provider: web3, signer: s, address: addr, balanceEth: bal };
+  return { provider: web3, signer, address: addr, balanceEth: bal };
 }
 
 async function connectWalletConnectV2() {
@@ -69,34 +74,35 @@ async function connectWalletConnectV2() {
   });
   await wc.connect();
   const web3 = new ethers.providers.Web3Provider(wc, 'any');
-  const s = web3.getSigner();
-  const addr = checksum(await s.getAddress());
+  const signer = web3.getSigner();
+  const addr = checksum(await signer.getAddress());
   const bal = ethers.utils.formatEther(await web3.getBalance(addr));
-  return { provider: web3, signer: s, address: addr, balanceEth: bal };
+  return { provider: web3, signer, address: addr, balanceEth: bal };
 }
 
 window.connectCryptoWallet = async function connectCryptoWallet() {
+  // Try injected provider first (MetaMask/Exodus extension)
   const inj = await connectInjected();
   if (inj) {
-    provider = inj.provider;
-    signer = inj.signer;
-    userAddress = inj.address;
+    wcProvider = inj.provider;
+    wcSigner = inj.signer;
+    wcUserAddress = inj.address;
     return inj;
   }
+  // Fall back to WalletConnect V2
   const wc = await connectWalletConnectV2();
-  provider = wc.provider;
-  signer = wc.signer;
-  userAddress = wc.address;
+  wcProvider = wc.provider;
+  wcSigner = wc.signer;
+  wcUserAddress = wc.address;
   return wc;
 };
+
 window.spendEth = async function spendEth(amountEth) {
-  if (!signer) throw new Error('Wallet not connected');
-  const tx = await signer.sendTransaction({
+  if (!wcSigner) throw new Error('Wallet not connected');
+  const tx = await wcSigner.sendTransaction({
     to: window.GAME_ADDRESS,
     value: ethers.utils.parseEther(String(amountEth)),
   });
   await tx.wait();
   return tx.hash;
 };
-
-
