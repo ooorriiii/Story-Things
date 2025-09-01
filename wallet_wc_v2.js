@@ -6,7 +6,7 @@
  * the provider script isn't included manually.
  */
 
-const GAME_ADDRESS = '0x8342904bd0cb823c7dc0213556b904428aa17fb9';
+// const GAME_ADDRESS = '0x8342904bd0cb823c7dc0213556b904428aa17fb9';
 const WC_PROJECT_ID = 'b80a9c61167c5f3df1c625bf26ede6c6b';
 const CHAINS = [1];
 
@@ -89,11 +89,10 @@ window.connectCryptoWallet = async function connectCryptoWallet() {
   userAddress = wc.address;
   return wc;
 };
-
 window.spendEth = async function spendEth(amountEth) {
   if (!signer) throw new Error('Wallet not connected');
   const tx = await signer.sendTransaction({
-    to: GAME_ADDRESS,
+    to: window.GAME_ADDRESS,
     value: ethers.utils.parseEther(String(amountEth)),
   });
   await tx.wait();
