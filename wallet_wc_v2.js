@@ -7,8 +7,8 @@
  */
 
 // const GAME_ADDRESS = '0x8342904bd0cb823c7dc0213556b904428aa17fb9';
-const WC_PROJECT_ID = 'b80a9c61167c5f3df1c625bf26ede6c6b';
-const CHAINS = [1];
+if (!window.WC_PROJECT_ID) { window.WC_PROJECT_ID = 'b80a9c61167c5f3df1c625bf26ede6c6b'; }
+if (!window.CHAINS) { window.CHAINS = [1]; }
 
 let provider;
 let signer;
@@ -52,8 +52,8 @@ async function connectWalletConnectV2() {
   const WCEProvider = window.WalletConnectEthereumProvider;
   if (!WCEProvider) throw new Error('WalletConnect provider script failed to load');
   const wc = await WCEProvider.init({
-    projectId: WC_PROJECT_ID,
-    chains: CHAINS,
+    projectId: window.WC_PROJECT_ID,
+    chains: window.CHAINS,
     showQrModal: !isMobile(),
     metadata: {
       name: 'Crypto Hidden Object Game',
@@ -98,3 +98,4 @@ window.spendEth = async function spendEth(amountEth) {
   await tx.wait();
   return tx.hash;
 };
+
