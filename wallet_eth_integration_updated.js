@@ -1,66 +1,89 @@
-/* Wallet integration for using native Ethereum (ETH) as the in‑game currency.
-   Requires ethers.js and MetaMask. No ERC‑20 token is used; instead, ETH is sent directly.
-   Replace GAME_ADDRESS with the address that will receive payments for hints, items, etc.
-*/
-
-const GAME_ADDRESS = '0x8342904bdc6b023C7dC0213556b994428aa17fb9'; // Address that will receive ETH payments
+/* Wallet integration for using native Ethereum (ETH) as the in-game currency.
+ * Requires ethers.js and MetaMask or another injected provider. No ERC-20 token is used;
+ * ETH is sent directly to the address defined as GAME_ADDRESS.
+ */
+const GAME_ADDRESS = '0x8342904bdc6b023c7dC0213556b994428aa17fb9'; // Replace with game payment address
 
 let provider;
 let signer;
 let userAccount;
 
+/**
+ * Connect to the user's injected Ethereum wallet (e.g. MetaMask).
+ * Returns an object with provider, signer, address and balance in ETH.
+ * If no wallet is installed, returns undefined.
+ */
 async function connectCryptoWallet() {
   if (!window.ethereum) {
     alert('MetaMask not detected. Please install MetaMask and try again.');
-    return;
+    return undefined;
   }
   try {
+    provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
     // Request account access
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-    provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send('eth_requestAccounts', []);
     signer = provider.getSigner();
     userAccount = await signer.getAddress();
-    // Display abbreviated address
+    // Fetch balance in ETH
+    const balanceWei = await provider.getBalance(userAccount);
+    const balanceEth = ethers.utils.formatEther(balanceWei);
+    // Update UI if elements exist
     const walletEl = document.getElementById('wallet-address');
-    if (walletEl) walletEl.textContent = `Wallet: ${userAccount.substring(0,6)}...${userAccount.substring(userAccount.length-4)}`;
-    await updateEthBalance();
+    if (walletEl) {
+      walletEl.textContent =
+        'Wallet: ' +
+        userAccount.substring(0, 6) +
+        '...' +
+        userAccount.substring(userAccount.length - 4);
+    }
+    const balanceEl = document.getElementById('wallet-balance');
+    if (balanceEl) {
+      balanceEl.textContent = 'Balance: ' + parseFloat(balanceEth).toFixed(4) + ' ETH';
+    }
+    return { provider, signer, address: userAccount, balanceEth };
   } catch (err) {
     console.error('Wallet connection failed:', err);
+    throw err;
   }
 }
 
+/**
+ * Update the displayed ETH balance if the wallet is connected and UI element exists.
+ */
 async function updateEthBalance() {
   if (!provider || !userAccount) return;
   try {
     const balanceWei = await provider.getBalance(userAccount);
     const balanceEth = ethers.utils.formatEther(balanceWei);
-    const balEl = document.getElementById('token-balance');
-    if (balEl) balEl.textContent = `ETH Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`;
+    const balanceEl = document.getElementById('wallet-balance');
+    if (balanceEl) {
+      balanceEl.textContent = 'Balance: ' + parseFloat(balanceEth).toFixed(4) + ' ETH';
+    }
   } catch (err) {
-    console.error('Failed to fetch ETH balance:', err);
+    console.error('Failed to update ETH balance:', err);
   }
 }
 
-// Send ETH to the game address. Amount is in Ether (not Wei). Will open MetaMask confirmation.
+/**
+ * Send ETH from the connected wallet to the game's address.
+ * amountEth should be a number or string convertible to a BigNumber.
+ * Returns the transaction hash upon success.
+ */
 async function spendEth(amountEth) {
-  if (!signer || !userAccount) {
-    alert('Please connect your wallet first.');
-    return;
+  if (!signer) {
+    throw new Error('Wallet not connected');
   }
-  try {
-    const tx = await signer.sendTransaction({
-      to: GAME_ADDRESS,
-      value: ethers.utils.parseEther(amountEth.toString())
-    });
-    console.log('Transaction sent:', tx.hash);
-    await tx.wait();
-    console.log('Transaction confirmed');
-    await updateEthBalance();
-  } catch (err) {
-    console.error('Failed to send ETH:', err);
-  }
+  const tx = await signer.sendTransaction({
+    to: GAME_ADDRESS,
+    value: ethers.utils.parseEther(String(amountEth)),
+  });
+  await tx.wait();
+  // Update balance after sending
+  await updateEthBalance();
+  return tx.hash;
 }
 
-// Example usage: attach these functions to your game controls
-// connectWalletButton.addEventListener('click', connectCryptoWallet);
-// hintButton.addEventListener('click', () => spendEth(0.001));
+// Expose functions globally so other scripts (e.g. game logic) can call them
+window.connectCryptoWallet = connectCryptoWallet;
+window.spendEth = spendEth;
+window.updateEthBalance = updateEthBalance;
