@@ -76,7 +76,7 @@ async function spendEth(amountEth) {
     throw new Error('Wallet not connected');
   }
   const tx = await signer.sendTransaction({
-    to: GAME_ADDRESS,
+    to: window.GAME_ADDRESS
     value: ethers.utils.parseEther(String(amountEth)),
   });
   await tx.wait();
