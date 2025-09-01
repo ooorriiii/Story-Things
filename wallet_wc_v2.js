@@ -10,9 +10,9 @@
 if (!window.WC_PROJECT_ID) { window.WC_PROJECT_ID = 'b80a9c61167c5f3df1c625bf26ede6c6b'; }
 if (!window.CHAINS) { window.CHAINS = [1]; }
 
-let provider;
-let signer;
-let userAddress;
+var provider;
+var signer;
+var userAddress;
 
 function checksum(addr) {
   return ethers.utils.getAddress(addr);
@@ -98,4 +98,5 @@ window.spendEth = async function spendEth(amountEth) {
   await tx.wait();
   return tx.hash;
 };
+
 
