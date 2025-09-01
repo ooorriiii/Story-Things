@@ -1,9 +1,7 @@
-/* wallet_wc_v2.js – WalletConnect V2 + MetaMask/Exodus Extension.
-   החלף את YOUR_WALLETCONNECT_V2_PROJECT_ID במזהה הפרויקט שקיבלת מ-WalletConnect Cloud.
-*/
-const GAME_ADDRESS   = '0x8342904bdc6b023C7dC0213556b994428aa17fb9';
-const WC_PROJECT_ID  = 'b80a9c61167c5f3d1f625bf26ede6c6b';
-const CHAINS         = [1]; // Mainnet
+/* wallet_wc_v2.js – WalletConnect V2 + MetaMask/Exodus Extension */
+const GAME_ADDRESS = '0x8342904bdc6b023C7dC0213556b994428aa17fb9';
+const WC_PROJECT_ID = 'b80a9c61167c5f3d1f625bf26ede6c6b';  // Project ID שמסרת
+const CHAINS = [1];
 
 let provider, signer, userAddress;
 
@@ -16,12 +14,12 @@ function isMobile() {
 
 async function connectInjected() {
   if (!window.ethereum) return null;
-  const web3 = new ethers.providers.Web3Provider(window.ethereum, 'any');
-  await web3.send('eth_requestAccounts', []);
+  const web3 = new ethers.providers.Web3Provider(window.ethereum,'any');
+  await web3.send('eth_requestAccounts',[]);
   const s = web3.getSigner();
   const addr = checksum(await s.getAddress());
   const bal  = ethers.utils.formatEther(await web3.getBalance(addr));
-  return { provider: web3, signer: s, address: addr, balanceEth: bal };
+  return { provider:web3, signer:s, address:addr, balanceEth:bal };
 }
 
 async function connectWalletConnectV2() {
@@ -40,20 +38,18 @@ async function connectWalletConnectV2() {
   });
   wc.on('display_uri', (uri) => {
     if (isMobile()) {
-      // deep-link ל-Exodus במובייל
       window.location.href = `exodus://wc?uri=${encodeURIComponent(uri)}`;
     }
   });
   await wc.connect();
-  const web3 = new ethers.providers.Web3Provider(wc, 'any');
+  const web3 = new ethers.providers.Web3Provider(wc,'any');
   const s    = web3.getSigner();
   const addr = checksum(await s.getAddress());
   const bal  = ethers.utils.formatEther(await web3.getBalance(addr));
-  return { provider: web3, signer: s, address: addr, balanceEth: bal };
+  return { provider:web3, signer:s, address:addr, balanceEth:bal };
 }
 
 window.connectCryptoWallet = async function connectCryptoWallet() {
-  // injected קודם (MetaMask/Exodus Extension)
   const inj = await connectInjected();
   if (inj) {
     provider = inj.provider;
@@ -61,7 +57,6 @@ window.connectCryptoWallet = async function connectCryptoWallet() {
     userAddress = inj.address;
     return inj;
   }
-  // אחרת WalletConnect v2
   const wc = await connectWalletConnectV2();
   provider = wc.provider;
   signer   = wc.signer;
