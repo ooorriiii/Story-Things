@@ -6,13 +6,21 @@
  * the provider script isn't included manually.
  */
 
-const GAME_ADDRESS = '0x8342904bdc6b023C7dC0213556b994428aa17fb9';
-const WC_PROJECT_ID = 'b80a9c61167c5f3d1f625bf26ede6c6b';
-const CHAINS = [1];
+// הגדר את מזהי WalletConnect כמשתנים גלובליים רק אם הם לא קיימים
+if (!window.GAME_ADDRESS) {
+  window.GAME_ADDRESS = '0x8342904bdc6b023C7dC0213556b994428aa17fb9';
+}
+if (!window.WC_PROJECT_ID) {
+  window.WC_PROJECT_ID = 'b80a9c61167c5f3d1f625bf26ede6c6b';
+}
+if (!window.CHAINS) {
+  window.CHAINS = [1];
+}
 
-let provider;
-let signer;
-let userAddress;
+// הכרז משתנים ייחודיים כדי לא להתנגש בקבצים אחרים
+let wcProvider;
+let wcSigner;
+let wcUserAddress;
 
 function checksum(addr) {
   return ethers.utils.getAddress(addr);
@@ -30,8 +38,6 @@ async function ensureWalletConnectLoaded() {
   }
   await new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    // Use a versioned CDN path for deterministic behaviour.  If you update
-    // @walletconnect/ethereum-provider version, update the URL accordingly.
     script.src =
       'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.21.8/dist/index.umd.min.js';
     script.onload = () => resolve();
@@ -56,8 +62,8 @@ async function connectWalletConnectV2() {
   const WCEProvider = window.WalletConnectEthereumProvider;
   if (!WCEProvider) throw new Error('WalletConnect provider script failed to load');
   const wc = await WCEProvider.init({
-    projectId: WC_PROJECT_ID,
-    chains: CHAINS,
+    projectId: window.WC_PROJECT_ID,
+    chains: window.CHAINS,
     showQrModal: !isMobile(),
     metadata: {
       name: 'Crypto Hidden Object Game',
@@ -83,23 +89,23 @@ window.connectCryptoWallet = async function connectCryptoWallet() {
   // Try injected provider first (MetaMask/Exodus extension)
   const inj = await connectInjected();
   if (inj) {
-    provider = inj.provider;
-    signer = inj.signer;
-    userAddress = inj.address;
+    wcProvider = inj.provider;
+    wcSigner = inj.signer;
+    wcUserAddress = inj.address;
     return inj;
   }
   // Fall back to WalletConnect V2
   const wc = await connectWalletConnectV2();
-  provider = wc.provider;
-  signer = wc.signer;
-  userAddress = wc.address;
+  wcProvider = wc.provider;
+  wcSigner = wc.signer;
+  wcUserAddress = wc.address;
   return wc;
 };
 
 window.spendEth = async function spendEth(amountEth) {
-  if (!signer) throw new Error('Wallet not connected');
-  const tx = await signer.sendTransaction({
-    to: GAME_ADDRESS,
+  if (!wcSigner) throw new Error('Wallet not connected');
+  const tx = await wcSigner.sendTransaction({
+    to: window.GAME_ADDRESS,
     value: ethers.utils.parseEther(String(amountEth)),
   });
   await tx.wait();
